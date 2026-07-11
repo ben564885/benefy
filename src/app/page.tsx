@@ -1,65 +1,112 @@
-import Image from "next/image";
+import Link from "next/link";
+import { caseloadTotal, listClients } from "@/lib/store";
+import { formatMoney } from "@/lib/format";
+import NewScreeningButton from "@/components/NewScreeningButton";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+function statusBadge(status: string) {
+  const map: Record<string, string> = {
+    screened: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    not_screened: "bg-slate-100 text-slate-600 border-slate-200",
+  };
+  const label = status === "screened" ? "Screened" : "Not yet screened";
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${map[status]}`}>
+      {label}
+    </span>
+  );
+}
+
+export default function DashboardPage() {
+  const clients = listClients();
+  const total = caseloadTotal();
+  const screenedCount = clients.filter((c) => c.last_screening).length;
+  const needsReviewCount = clients.reduce(
+    (sum, c) => sum + (c.last_screening?.needs_review_count ?? 0),
+    0,
+  );
+
+  return (
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
+      <header className="flex flex-col gap-1">
+        <p className="text-sm font-medium uppercase tracking-wide text-teal-700">Benefind</p>
+        <h1 className="text-2xl font-semibold text-slate-900">Caseload dashboard</h1>
+        <p className="text-sm text-slate-500">
+          Deterministic benefits screening for San Francisco caseworkers, guided by a Gradient AI intake &amp;
+          navigator agent pair.
+        </p>
+      </header>
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm text-slate-500">Total benefits surfaced</p>
+          <p className="mt-2 text-3xl font-semibold text-emerald-700">{formatMoney(total)}</p>
+          <p className="mt-1 text-xs text-slate-400">annual, across likely-eligible programs only</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm text-slate-500">Clients screened</p>
+          <p className="mt-2 text-3xl font-semibold text-slate-900">
+            {screenedCount} <span className="text-lg font-normal text-slate-400">/ {clients.length}</span>
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm text-slate-500">Needs review</p>
+          <p className="mt-2 text-3xl font-semibold text-amber-600">{needsReviewCount}</p>
+          <p className="mt-1 text-xs text-slate-400">program screens awaiting caseworker follow-up</p>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-900">Caseload</h2>
+        <NewScreeningButton />
+      </section>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-5 py-3 font-medium">Client</th>
+              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium">Estimated annual value</th>
+              <th className="px-5 py-3 font-medium">Needs review</th>
+              <th className="px-5 py-3 font-medium">Last screened</th>
+              <th className="px-5 py-3" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {clients.map((record) => (
+              <tr key={record.profile.client_id} className="hover:bg-slate-50">
+                <td className="px-5 py-4 font-medium text-slate-900">{record.profile.display_name}</td>
+                <td className="px-5 py-4">{statusBadge(record.last_screening ? "screened" : "not_screened")}</td>
+                <td className="px-5 py-4 text-slate-700">
+                  {record.last_screening ? formatMoney(record.last_screening.total_estimated_annual_value) : "—"}
+                </td>
+                <td className="px-5 py-4 text-slate-700">
+                  {record.last_screening && record.last_screening.needs_review_count > 0 ? (
+                    <span className="font-medium text-amber-600">{record.last_screening.needs_review_count}</span>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                <td className="px-5 py-4 text-slate-500">
+                  {record.profile.last_screened_at
+                    ? new Date(record.profile.last_screened_at).toLocaleDateString()
+                    : "—"}
+                </td>
+                <td className="px-5 py-4 text-right">
+                  <Link
+                    href={`/clients/${record.profile.client_id}`}
+                    className="font-medium text-teal-700 hover:text-teal-900"
+                  >
+                    Open →
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </main>
   );
 }

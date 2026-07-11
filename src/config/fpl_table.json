@@ -1,0 +1,16 @@
+{
+  "_source": "U.S. Dept. of Health & Human Services, ASPE — 2026 Poverty Guidelines, 48 Contiguous States. https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines",
+  "_note": "Annual figures at 100% FPL by household size. Percent-of-FPL for any household size/income is computed by the engine, not stored per-program.",
+  "effective_date": "2026-01-01",
+  "annual_by_household_size": {
+    "1": 15960,
+    "2": 21640,
+    "3": 27320,
+    "4": 33000,
+    "5": 38680,
+    "6": 44360,
+    "7": 50040,
+    "8": 55720
+  },
+  "additional_person_annual": 5680
+}

@@ -1,0 +1,121 @@
+[
+  {
+    "program_id": "calfresh",
+    "name": "CalFresh (SNAP)",
+    "level": "state",
+    "administered_by": "CA Dept. of Social Services / SF Human Services Agency",
+    "short_description": "Monthly grocery benefit on an EBT card for low-income households.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "fpl_pct", "max_pct": 200 },
+      "categorical_pass": ["Medi-Cal", "CalWORKs", "SSI"],
+      "requires_sf_resident": false,
+      "immigration_sensitive": true,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "table_by_household_size",
+      "_note": "Illustrative average monthly benefit, modeled as 55% of the CDSS maximum monthly allotment (most households do not receive the max, which is reserved for $0 net-income households). Flagged as an estimate in the UI.",
+      "_source": "CDSS 2025-2026 CalFresh Income & Eligibility Limits, effective 10/1/2025-9/30/2026. Item #220000.",
+      "annual_by_household_size": {
+        "1": 1968,
+        "2": 3600,
+        "3": 5184,
+        "4": 6564,
+        "5": 7812,
+        "6": 9384,
+        "7": 10368,
+        "8": 11808
+      },
+      "additional_person_annual": 2616
+    },
+    "required_documents": [
+      "Proof of identity (ID card, driver's license, or passport)",
+      "Proof of income (recent pay stubs, or a signed statement if paid in cash)",
+      "Proof of California/SF residency (lease, utility bill, or piece of mail)"
+    ],
+    "application": {
+      "form_name": "CalFresh Application (BenefitsCal)",
+      "form_url": "https://benefitscal.com",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "monthly_income_gross": "field_monthly_income",
+        "zip_code": "field_zip_code",
+        "sf_resident": "field_ca_resident",
+        "current_programs": "field_existing_benefits"
+      }
+    }
+  },
+  {
+    "program_id": "pge_care",
+    "name": "PG&E CARE (California Alternate Rates for Energy)",
+    "level": "utility",
+    "administered_by": "Pacific Gas & Electric Co. / CPUC",
+    "short_description": "20%+ discount on gas and 35%+ discount on electric bills for qualifying households.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "fpl_pct", "max_pct": 200 },
+      "categorical_pass": ["CalFresh", "Medi-Cal", "SSI", "CalWORKs"],
+      "requires_sf_resident": false,
+      "immigration_sensitive": false,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Illustrative flat annual savings estimate based on a representative SF household bill and PG&E's published discount (20%+ gas / 35%+ electric). Actual savings vary by usage and vintage of home.",
+      "_source": "PG&E CARE program page, income guidelines valid through 5/31/2027. https://www.pge.com/en/account/billing-and-assistance/financial-assistance/california-alternate-rates-for-energy-program.html",
+      "annual_value": 420
+    },
+    "required_documents": [
+      "Proof of income for every adult household member with income — most recent pay stub(s), an award letter (Social Security/SSDI/VA/pension), or a full federal tax return",
+      "OR proof of enrollment in a qualifying public assistance program (Medi-Cal, CalFresh, SSI, CalWORKs, LIHEAP) as a recent award or participation letter"
+    ],
+    "_documents_source": "PG&E Required Income Document Guide / Required Public Assistance Document Guide.",
+    "application": {
+      "form_name": "CARE/FERA Program Application",
+      "form_url": "https://www.pge.com/assets/pge/localized/en/docs/account/billing-and-assistance/care-fera-application.pdf",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "annual_income_gross": "field_annual_income",
+        "zip_code": "field_zip_code",
+        "current_programs": "field_categorical_program"
+      }
+    }
+  },
+  {
+    "program_id": "sfmta_free_muni",
+    "name": "Free Muni for Seniors & People with Disabilities",
+    "level": "sf_local",
+    "administered_by": "SFMTA",
+    "short_description": "Free Clipper-based Muni access for SF resident seniors (65+) and people with qualifying disabilities.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "ami_pct", "max_pct": 100 },
+      "categorical_pass": [],
+      "requires_sf_resident": true,
+      "immigration_sensitive": false,
+      "requires_senior_or_disabled": true,
+      "senior_age_cutoff": 65
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Value of a standard Muni-only (\"M\") monthly Clipper pass, waived entirely for enrolled clients, times 12.",
+      "_source": "SFMTA Fares page. https://www.sfmta.com/getting-around/muni/fares",
+      "annual_value": 1032
+    },
+    "required_documents": [
+      "Proof of San Francisco residency",
+      "Proof of age 65+ (for seniors) via a Senior Clipper card, OR an active Clipper Access (RTC) card confirming a qualifying disability"
+    ],
+    "application": {
+      "form_name": "Free Muni for Seniors & People with Disabilities Enrollment",
+      "form_url": "https://www.sfmta.com/fares/free-muni-seniors-ages-65",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "member_ages": "field_applicant_age",
+        "has_disability": "field_disability_status",
+        "sf_resident": "field_sf_residency",
+        "zip_code": "field_zip_code"
+      }
+    }
+  }
+]

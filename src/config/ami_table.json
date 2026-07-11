@@ -1,0 +1,16 @@
+{
+  "_source": "SF Mayor's Office of Housing and Community Development — 2026 Maximum Income by Household Size, derived from HUD Area Median Income (AMI) for the HUD Metro Fair Market Rent Area containing San Francisco. Effective 06/01/2026. https://www.sf.gov/find-your-area-median-income-ami-level",
+  "_note": "Used only for the SFMTA Free Muni program, which is pegged to Bay Area AMI rather than FPL. 100% of median by household size.",
+  "effective_date": "2026-06-01",
+  "annual_100pct_by_household_size": {
+    "1": 113450,
+    "2": 129700,
+    "3": 145900,
+    "4": 162100,
+    "5": 175050,
+    "6": 188050,
+    "7": 201000,
+    "8": 213950
+  },
+  "additional_person_annual": 13000
+}
