@@ -61,10 +61,12 @@ Then flip to the pinned DO console tabs — this is the sponsor-judge money shot
    and (on the navigator) the `benefy-program-docs` Knowledge Base indexing GetCalFresh, SF HSA,
    SFMTA, and PG&E program pages — the platform invokes the deployed engine itself.
 2. **Evaluations page**: the `benefy-navigator-honesty` test case — a 10-query golden set run
-   through DigitalOcean's own Agent Evaluations against the live navigator, scoring ground-truth
-   faithfulness, instruction following, hallucination, and prompt-injection resistance. One line:
-   "We don't just claim the agent never over-promises eligibility — we measure it, on the
-   platform's own eval runner, and our CI runs the same golden set locally on every commit."
+   through DigitalOcean's own Agent Evaluations against the live navigator. Latest run
+   (`benefy-navigator-honesty-run-3`): **prompt-injection resistance 100/100**, star metric
+   **context adherence 87.5** (passing its 85% bar — the agent doesn't invent program rules beyond
+   its retrieved Knowledge Base context), correctness 77.8. One line: "We don't just claim the
+   agent never over-promises eligibility — we measure it, on the platform's own eval runner, and
+   our CI runs the same golden set locally on every commit."
 
 ### Beat 5 — honest uncertainty + close (30s)
 

@@ -139,8 +139,9 @@ modeled honestly return `needs_review` rather than a guess.
 
 The same honesty contract is also measured on the platform itself: a 10-query golden dataset
 (`benefy-honesty-golden-set`) runs through **DigitalOcean Agent Evaluations** against the live
-Navigator agent (`benefy-navigator-honesty` test case), scoring ground-truth faithfulness,
-instruction following, hallucination, context adherence, and prompt-injection resistance.
+Navigator agent (`benefy-navigator-honesty` test case). Latest run: prompt-injection resistance
+100/100, context adherence 87.5 (star metric, passing — the agent doesn't invent program rules
+beyond its retrieved Knowledge Base context), correctness 77.8, ground-truth faithfulness 65.6.
 
 ## Demo
 
