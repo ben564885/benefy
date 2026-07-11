@@ -172,18 +172,16 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 self-end">
-        <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-sm">
+        <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
           {LANGS.map((l) => (
             <button
               key={l.code}
               onClick={() => setLang(l.code)}
-              aria-label={l.label}
-              title={l.label}
-              className={`rounded-full px-2 py-0.5 transition ${
-                lang === l.code ? "bg-white shadow-sm" : "opacity-40 hover:opacity-70"
+              className={`rounded-full px-3 py-1 font-medium transition ${
+                lang === l.code ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {l.flag}
+              {l.label}
             </button>
           ))}
         </div>

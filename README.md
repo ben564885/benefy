@@ -71,7 +71,7 @@ your free text / quick-reply chips / voice
 - **`src/app/api/`** — Next.js route handlers: client CRUD, `intake` (chat turn → router → agent),
   `screen` (tool call + trace record), `application/[programId]` (pre-fill), realtime voice session.
 - **`src/app/clients/[id]`** — the screening workspace: guided chat with quick-reply chips
-  (**English/Spanish toggle** — 🇺🇸/🇪🇸), free-text intake, voice intake, results with dollar
+  (**English/Spanish toggle**), free-text intake, voice intake, results with dollar
   reveal, program cards, "View reasoning" trace, pre-filled application view.
 
 ### Three backends, tried in order (what's live, honestly)
@@ -99,7 +99,8 @@ deterministic engine as text intake.
 ### Language support
 
 The guided intake (questions, quick-reply chips, income stepper, completion summary) has a full
-Spanish mode behind a flag toggle (🇺🇸/🇪🇸). Free-text intake in Spanish is answered in Spanish by
+Spanish mode behind an English/Spanish toggle, and the voice intake conducts the whole call in the
+selected language. Free-text intake in Spanish is answered in Spanish by
 the live agents. Chips send canonical English values under the hood, so extraction behaves
 identically in both languages. Results/explanations are English-only for now — see roadmap.
 

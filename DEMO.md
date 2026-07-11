@@ -29,10 +29,10 @@
 Landing page → **Check what I qualify for**. Answer the guided chips fast:
 *Household of 2 → $1,400/month → SF: Yes → U.S. citizen → senior 65+.*
 
-Mid-flow, tap the **🇪🇸 flag** — questions, chips, and the income stepper flip to Spanish
-instantly. One line: "SF's benefits-eligible population is heavily non-English-speaking — the
-intake layer is already bilingual, and the LLM answers free text in whatever language you write."
-Tap 🇺🇸 back.
+Mid-flow, tap **Spanish** in the language toggle — questions, chips, and the income stepper flip
+to Spanish instantly (voice mode follows it too). One line: "SF's benefits-eligible population is
+heavily non-English-speaking — the intake layer is already bilingual, and the LLM answers free
+text in whatever language you write." Tap **English** back.
 
 ### Beat 3 — the reveal (20s)
 

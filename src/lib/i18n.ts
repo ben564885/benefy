@@ -5,9 +5,9 @@
 
 export type Lang = "en" | "es";
 
-export const LANGS: { code: Lang; flag: string; label: string }[] = [
-  { code: "en", flag: "🇺🇸", label: "English" },
-  { code: "es", flag: "🇪🇸", label: "Español" },
+export const LANGS: { code: Lang; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
 ];
 
 export interface Chip {
