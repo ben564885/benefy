@@ -40,6 +40,21 @@ create table if not exists public.clients (
   created_at timestamptz not null default now()
 );
 
+-- `create table if not exists` above is a no-op on a database where
+-- `clients` already exists (i.e. every real deploy after the first) — it
+-- does NOT retroactively add new columns to an existing table. The
+-- `alter table ... add column if not exists` below is what actually lands
+-- application_profile on a pre-existing clients table; the column def
+-- inside create table above only matters for a genuinely fresh install.
+alter table public.clients
+  add column if not exists application_profile jsonb not null default '{
+    "legal_name": null, "date_of_birth": null, "street_address": null,
+    "city": null, "mailing_zip_code": null, "phone": null, "email": null,
+    "preferred_language": null, "pge_account_number": null,
+    "sfpuc_account_number": null, "household_members": [],
+    "ssn_last4": null, "ssn_encrypted": null
+  }'::jsonb;
+
 -- The app talks to this table exclusively through the Supabase service-role
 -- key from server-side route handlers, so RLS stays enabled with no public
 -- policies: only the service role (which bypasses RLS) can touch it.
