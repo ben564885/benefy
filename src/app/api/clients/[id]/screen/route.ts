@@ -35,7 +35,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     timestamp: new Date().toISOString(),
   });
 
-  const explanation = await explainScreening(updated.profile, updated.last_screening, null, trace);
+  const explanation = await explainScreening(updated.profile, updated.last_screening, null, trace, id);
   trace.push({
     step: "navigator_explanation_ready",
     actor: "navigator_agent",

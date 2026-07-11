@@ -30,7 +30,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
   const [trace, setTrace] = useState<TraceStep[]>(initialTrace);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [citations, setCitations] = useState<{ program_id: string; source: string; url: string }[]>([]);
-  const [mode, setMode] = useState<"live_gradient_agent" | "local_fallback" | null>(null);
+  const [mode, setMode] = useState<"live_gradient_agent" | "live_inference" | "local_fallback" | null>(null);
   const [tab, setTab] = useState<"intake" | "results">(screening ? "results" : "intake");
   const [screening_loading, setScreeningLoading] = useState(false);
 

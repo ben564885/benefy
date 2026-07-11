@@ -12,7 +12,7 @@ interface Props {
   programs: ProgramDefinition[];
   explanation: string | null;
   citations: { program_id: string; source: string; url: string }[];
-  mode: "live_gradient_agent" | "local_fallback" | null;
+  mode: "live_gradient_agent" | "live_inference" | "local_fallback" | null;
   trace: TraceStep[];
   onResolve: (programId: string) => void;
 }
@@ -67,8 +67,16 @@ export default function ResultsView({
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">Navigator explanation</h3>
             {mode && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                {mode === "live_gradient_agent" ? "Live Gradient agent" : "Local fallback (no Gradient credentials configured)"}
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs ${
+                  mode === "local_fallback" ? "bg-slate-100 text-slate-500" : "bg-emerald-100 text-emerald-700"
+                }`}
+              >
+                {mode === "live_gradient_agent"
+                  ? "Live Gradient Agent Platform"
+                  : mode === "live_inference"
+                    ? "Live DigitalOcean Inference (real tool-calling)"
+                    : "Local fallback (no live credentials configured)"}
               </span>
             )}
           </div>

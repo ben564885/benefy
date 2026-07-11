@@ -151,7 +151,7 @@ async function runCase(evalCase: EvalCase): Promise<EvalCaseResult> {
   }
 
   const trace: TraceStep[] = [];
-  const explanation = await explainScreening(evalCase.profile, screening, null, trace);
+  const explanation = await explainScreening(evalCase.profile, screening, null, trace, evalCase.profile.client_id);
 
   // "Never asserts eligibility on its own" check: find the explanation's
   // paragraph for each program (by name) and confirm it doesn't claim

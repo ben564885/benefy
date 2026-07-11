@@ -36,7 +36,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const userMessage: ChatMessage = { role: "user", content: message, timestamp: new Date().toISOString() };
 
   if (target === "navigator" && record.last_screening) {
-    const explanation = await explainScreening(record.profile, record.last_screening, message, trace);
+    const explanation = await explainScreening(record.profile, record.last_screening, message, trace, id);
     const assistantMessage: ChatMessage = {
       role: "assistant",
       content: explanation.text,
@@ -55,7 +55,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     });
   }
 
-  const intakeResult = await runIntakeTurn(message, record.profile, trace);
+  const intakeResult = await runIntakeTurn(message, id, record.profile, trace);
   const updated = updateProfile(id, intakeResult.patch);
   const assistantMessage: ChatMessage = {
     role: "assistant",
