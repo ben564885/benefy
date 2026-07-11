@@ -251,6 +251,18 @@ export default function ChatPanel({
               </div>
             );
           })}
+          {activeField && (
+            <div className="flex flex-col gap-1">
+              <span className="px-1 text-xs font-medium text-slate-400">
+                {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
+              </span>
+              <div className="flex justify-start">
+                <div className="w-full rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-800">
+                  {questionPrompt}
+                </div>
+              </div>
+            </div>
+          )}
           {((sending && !sendingGuided) || screeningLoading) && (
             <div className="flex justify-start">
               <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
@@ -275,62 +287,55 @@ export default function ChatPanel({
             </button>
           </div>
         )}
-        {activeField && (
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium text-slate-400">
-              {activeField === "veteran_status"
-                ? `${t.optional} · ${questionPrompt}`
-                : `${t.questionOf(questionNumber, questionTotal)} · ${questionPrompt}`}
-            </span>
-            {activeField === "monthly_income_gross" ? (
-              <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
-            ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                {t.chips[activeField].map((chip) => (
-                  <button
-                    key={chip.value}
-                    type="button"
-                    disabled={disabled || sending}
-                    onClick={() => submitMessage(chip.value, true, chip.label)}
-                    className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-                {activeField === "veteran_status" && (
-                  <button
-                    type="button"
-                    disabled={disabled || sending}
-                    onClick={onSkipVeteran}
-                    className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {t.skipOptionalLabel}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        <form
-          onSubmit={handleSubmit}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm"
-        >
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            disabled={disabled || sending}
-            placeholder={composerPlaceholder}
-            className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
-          />
-          <button
-            type="submit"
-            disabled={disabled || sending || !draft.trim()}
-            className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-40"
+        {activeField ? (
+          activeField === "monthly_income_gross" ? (
+            <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              {t.chips[activeField].map((chip) => (
+                <button
+                  key={chip.value}
+                  type="button"
+                  disabled={disabled || sending}
+                  onClick={() => submitMessage(chip.value, true, chip.label)}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {chip.label}
+                </button>
+              ))}
+              {activeField === "veteran_status" && (
+                <button
+                  type="button"
+                  disabled={disabled || sending}
+                  onClick={onSkipVeteran}
+                  className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t.skipOptionalLabel}
+                </button>
+              )}
+            </div>
+          )
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm"
           >
-            {t.send}
-          </button>
-        </form>
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={disabled || sending}
+              placeholder={composerPlaceholder}
+              className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
+            />
+            <button
+              type="submit"
+              disabled={disabled || sending || !draft.trim()}
+              className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-40"
+            >
+              {t.send}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
