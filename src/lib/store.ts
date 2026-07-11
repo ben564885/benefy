@@ -49,7 +49,7 @@ if (!globalForMemory.benefyMemoryClients) {
   globalForMemory.benefyMemoryClients = memoryClients;
 }
 
-function useMemoryStore(): boolean {
+function shouldUseMemoryStore(): boolean {
   return isLocalDevWithoutSupabase();
 }
 
@@ -139,7 +139,7 @@ function profileToRow(
 }
 
 export async function listClientsForUser(userId: string): Promise<ClientRecord[]> {
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     return [...memoryClients.values()]
       .filter((row) => row.user_id === userId)
       .map(rowToRecord);
@@ -157,7 +157,7 @@ export async function listClientsForUser(userId: string): Promise<ClientRecord[]
 // runs. Every other function in this file trusts that the caller has
 // already verified the requesting user owns clientId.
 export async function getClientOwnerId(clientId: string): Promise<string | null> {
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     return getMemoryRow(clientId)?.user_id ?? null;
   }
   const { data, error } = await clientsTable().select("user_id").eq("client_id", clientId).maybeSingle();
@@ -166,7 +166,7 @@ export async function getClientOwnerId(clientId: string): Promise<string | null>
 }
 
 export async function getClient(clientId: string): Promise<ClientRecord | undefined> {
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     const row = getMemoryRow(clientId);
     return row ? rowToRecord(row) : undefined;
   }
@@ -179,7 +179,7 @@ export async function getClient(clientId: string): Promise<ClientRecord | undefi
 }
 
 export async function createClient(profile: ClientProfile, userId: string): Promise<ClientRecord> {
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     const row: ClientRow = {
       ...profileToRow(profile),
       user_id: userId,
@@ -205,7 +205,7 @@ export async function updateProfile(
   const existing = await getClient(clientId);
   if (!existing) return undefined;
   const merged = { ...existing.profile, ...patch };
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     const row = getMemoryRow(clientId);
     if (!row) return undefined;
     const updated: ClientRow = { ...row, ...profileToRow(merged) };
@@ -225,7 +225,7 @@ export async function screenAndStore(clientId: string): Promise<ClientRecord | u
   const existing = await getClient(clientId);
   if (!existing) return undefined;
   const screening = screenClient(existing.profile);
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     const row = getMemoryRow(clientId);
     if (!row) return undefined;
     const updated: ClientRow = {
@@ -246,7 +246,7 @@ export async function screenAndStore(clientId: string): Promise<ClientRecord | u
 }
 
 export async function getChatHistory(clientId: string): Promise<ChatMessage[]> {
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     return getMemoryRow(clientId)?.chat_history ?? [];
   }
   const { data, error } = await clientsTable()
@@ -258,7 +258,7 @@ export async function getChatHistory(clientId: string): Promise<ChatMessage[]> {
 }
 
 export async function appendChatMessages(clientId: string, messages: ChatMessage[]): Promise<void> {
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     const row = getMemoryRow(clientId);
     if (!row) return;
     setMemoryRow({ ...row, chat_history: [...row.chat_history, ...messages] });
@@ -272,7 +272,7 @@ export async function appendChatMessages(clientId: string, messages: ChatMessage
 }
 
 export async function getTrace(clientId: string): Promise<TraceStep[]> {
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     return getMemoryRow(clientId)?.trace ?? [];
   }
   const { data, error } = await clientsTable()
@@ -284,7 +284,7 @@ export async function getTrace(clientId: string): Promise<TraceStep[]> {
 }
 
 export async function setTrace(clientId: string, trace: TraceStep[]): Promise<void> {
-  if (useMemoryStore()) {
+  if (shouldUseMemoryStore()) {
     const row = getMemoryRow(clientId);
     if (!row) return;
     setMemoryRow({ ...row, trace });

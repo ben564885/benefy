@@ -76,7 +76,7 @@ function localFallbackExplain(_profile: ClientProfile, screening: ScreeningResul
     );
   }
 
-  lines.push("This is a screening estimate only. Nothing has been submitted and nothing is guaranteed.");
+  lines.push("This is a screening estimate only. Nothing has been submitted, and this is not a promise of approval.");
   return lines.join("\n\n");
 }
 
@@ -136,7 +136,7 @@ function localFallbackAnswer(question: string, profile: ClientProfile, screening
     return [
       "Benefy screens your household against real SF and California benefit programs using a deterministic rules engine — the AI gathers your info and explains results, but never decides eligibility on its own.",
       "You can ask me about your screening summary, any program card above, what documents you might need, or how to apply. To update your household facts (income, size, etc.), just tell me in plain English.",
-      "Nothing on Benefy submits an application or guarantees benefits — every dollar figure is a screening estimate.",
+      "Nothing on Benefy submits an application or promises benefits — every dollar figure is a screening estimate.",
     ].join("\n\n");
   }
 

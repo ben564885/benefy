@@ -62,6 +62,12 @@ export function routeTurn(
   if (hasExistingScreening && NAVIGATOR_SIGNALS.some((p) => p.test(lower))) {
     return "navigator";
   }
+  // Resolve-phrased asks ("ask me the rest", "finish the questions") with
+  // nothing currently unresolved still mean "keep asking me questions" —
+  // that's an intake request, not a request to explain something.
+  if (hasExistingScreening && RESOLVE_SIGNALS.some((p) => p.test(lower))) {
+    return "intake";
+  }
   if (hasExistingScreening) {
     return "navigator";
   }

@@ -56,6 +56,12 @@ alter table public.clients
     "ssn_last4": null, "ssn_encrypted": null
   }'::jsonb;
 
+-- Same story as application_profile above: is_veteran was added to the
+-- `create table` column list, which is a no-op against the pre-existing
+-- table. This is what actually lands it in production.
+alter table public.clients
+  add column if not exists is_veteran boolean;
+
 -- The app talks to this table exclusively through the Supabase service-role
 -- key from server-side route handlers, so RLS stays enabled with no public
 -- policies: only the service role (which bypasses RLS) can touch it.
