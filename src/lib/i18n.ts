@@ -18,9 +18,7 @@ export interface Chip {
 interface IntakeStrings {
   emptyTitle: string;
   emptySub: string;
-  optional: string;
   questionOf: (n: number, total: number) => string;
-  seniorDisabilityPrompt: string;
   prompts: Record<string, string>;
   chips: Record<string, Chip[]>;
   incomePlaceholder: string;
@@ -41,16 +39,14 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
     emptyTitle: "What's your situation?",
     emptySub:
       "Tell me about your household — or just answer the quick questions below — and I'll surface every SF benefit you likely qualify for, right here.",
-    optional: "Optional",
     questionOf: (n, total) => `Question ${n} of ${total}`,
-    seniorDisabilityPrompt:
-      "Is anyone in your household a senior (65+) or living with a disability? Optional — it only affects a few SF programs.",
     prompts: {
       household_size: "How many people are in your household?",
       monthly_income_gross: "What's your household's approximate gross monthly (or annual) income?",
       sf_resident: "Do you live in San Francisco?",
       immigration_status:
         "What's your immigration status (citizen, lawful permanent resident, other, or unknown)?",
+      senior_disability: "Is anyone in your household a senior (65+) or living with a disability?",
     },
     chips: {
       household_size: [
@@ -93,16 +89,14 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
     emptyTitle: "¿Cuál es su situación?",
     emptySub:
       "Cuénteme sobre su hogar — o simplemente responda las preguntas rápidas de abajo — y le mostraré aquí mismo todos los beneficios de SF a los que probablemente califica.",
-    optional: "Opcional",
     questionOf: (n, total) => `Pregunta ${n} de ${total}`,
-    seniorDisabilityPrompt:
-      "¿Alguien en su hogar es adulto mayor (65+) o vive con una discapacidad? Opcional — solo afecta a algunos programas de SF.",
     prompts: {
       household_size: "¿Cuántas personas hay en su hogar?",
       monthly_income_gross: "¿Cuál es el ingreso bruto mensual (o anual) aproximado de su hogar?",
       sf_resident: "¿Vive usted en San Francisco?",
       immigration_status:
         "¿Cuál es su estatus migratorio (ciudadanía, residencia permanente, otro, o no está seguro/a)?",
+      senior_disability: "¿Alguien en su hogar es adulto mayor (65+) o vive con una discapacidad?",
     },
     chips: {
       household_size: [

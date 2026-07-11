@@ -2,11 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChatMessage, ClientProfile, ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
-import {
-  CORE_REQUIRED_FIELDS,
-  missingCoreFields,
-  missingSeniorDisabilityField,
-} from "@/lib/gradient/intakeExtractor";
+import { CORE_REQUIRED_FIELDS, missingCoreFields } from "@/lib/gradient/intakeExtractor";
 import { INTAKE_STRINGS, type Lang } from "@/lib/i18n";
 import AgentMarkdown from "@/components/AgentMarkdown";
 import ResultsCard from "@/components/ResultsCard";
@@ -132,32 +128,34 @@ export default function ChatPanel({
   const [sending, setSending] = useState(false);
   const [sendingGuided, setSendingGuided] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastItemRef = useRef<HTMLDivElement>(null);
   const firstScroll = useRef(true);
   const t = INTAKE_STRINGS[lang];
 
   // Track the conversation: jump to the bottom on load, glide there on every
-  // new message / typing indicator so a sent message is always in view.
+  // new message / typing indicator so a sent message is always in view. A
+  // freshly landed results card is tall (summary, program grid, disclosures),
+  // so scrolling the container to its scrollHeight buries the summary off
+  // the top of the viewport — scroll that card's own top into view instead.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: firstScroll.current ? "auto" : "smooth" });
+    const last = thread[thread.length - 1];
+    if (last?.kind === "results" && lastItemRef.current) {
+      lastItemRef.current.scrollIntoView({ behavior: firstScroll.current ? "auto" : "smooth", block: "start" });
+    } else {
+      el.scrollTo({ top: el.scrollHeight, behavior: firstScroll.current ? "auto" : "smooth" });
+    }
     firstScroll.current = false;
   }, [thread.length, sending, screeningLoading]);
 
   const missing = missingCoreFields(profile);
   const coreDone = missing.length === 0;
-  const showOptional = coreDone && missingSeniorDisabilityField(profile);
   // While resolving a specific program, the targeted question owns the
   // conversation — hide the generic guided chips so answers go to /resolve.
-  const activeField: ActiveField = resolving
-    ? null
-    : !coreDone
-      ? (missing[0].key as ActiveField)
-      : showOptional
-        ? "senior_disability"
-        : null;
+  const activeField: ActiveField = resolving || coreDone ? null : (missing[0].key as ActiveField);
   const questionNumber = CORE_REQUIRED_FIELDS.length - missing.length + 1;
-  const questionPrompt = !coreDone ? t.prompts[missing[0].key as string] : t.seniorDisabilityPrompt;
+  const questionPrompt = !coreDone ? t.prompts[missing[0].key as string] : "";
 
   async function submitMessage(text: string, guided = false, display?: string) {
     if (!text.trim() || sending) return;
@@ -195,9 +193,14 @@ export default function ChatPanel({
             <p className="max-w-md text-sm text-slate-500">{t.emptySub}</p>
           </div>
         )}
-        {thread.map((item, i) =>
-          item.kind === "message" ? (
-            <div key={i} className={`flex ${item.message.role === "user" ? "justify-end" : "justify-start"}`}>
+        {thread.map((item, i) => {
+          const isLast = i === thread.length - 1;
+          return item.kind === "message" ? (
+            <div
+              key={i}
+              ref={isLast ? lastItemRef : undefined}
+              className={`flex ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
+            >
               <div
                 className={`max-w-[85%] rounded-3xl px-4 py-2.5 text-sm ${
                   item.message.role === "user"
@@ -213,21 +216,22 @@ export default function ChatPanel({
               </div>
             </div>
           ) : (
-            <ResultsCard
-              key={i}
-              clientId={clientId}
-              screening={item.screening}
-              programs={programs}
-              explanation={item.explanation}
-              explanationPending={item.explanationPending}
-              citations={item.citations}
-              mode={item.mode}
-              trace={item.trace}
-              onResolve={onResolve}
-              onRecheck={onRecheck}
-            />
-          ),
-        )}
+            <div key={i} ref={isLast ? lastItemRef : undefined}>
+              <ResultsCard
+                clientId={clientId}
+                screening={item.screening}
+                programs={programs}
+                explanation={item.explanation}
+                explanationPending={item.explanationPending}
+                citations={item.citations}
+                mode={item.mode}
+                trace={item.trace}
+                onResolve={onResolve}
+                onRecheck={onRecheck}
+              />
+            </div>
+          );
+        })}
         {((sending && !sendingGuided) || screeningLoading) && (
           <div className="flex justify-start">
             <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
@@ -255,8 +259,7 @@ export default function ChatPanel({
         {activeField && (
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-slate-400">
-              {coreDone ? t.optional : t.questionOf(questionNumber, CORE_REQUIRED_FIELDS.length)} ·{" "}
-              {questionPrompt}
+              {t.questionOf(questionNumber, CORE_REQUIRED_FIELDS.length)} · {questionPrompt}
             </span>
             {activeField === "monthly_income_gross" ? (
               <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />

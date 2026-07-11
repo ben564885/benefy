@@ -167,7 +167,11 @@ export function extractProfilePatch(
   return { patch, notes_appended: text };
 }
 
-export const CORE_REQUIRED_FIELDS: { key: keyof ClientProfile; prompt: string }[] = [
+// "senior_disability" isn't a real ClientProfile key — it's a synthetic
+// entry standing in for the has_senior/has_disability pair, which the
+// engine treats as a single yes/no question (see missingCoreFields below
+// and the "senior_disability" chip set in src/lib/i18n.ts).
+export const CORE_REQUIRED_FIELDS: { key: keyof ClientProfile | "senior_disability"; prompt: string }[] = [
   { key: "household_size", prompt: "How many people are in your household?" },
   {
     key: "monthly_income_gross",
@@ -179,12 +183,19 @@ export const CORE_REQUIRED_FIELDS: { key: keyof ClientProfile; prompt: string }[
     prompt:
       "What's your immigration status (citizen, lawful permanent resident, other, or unknown)?",
   },
+  {
+    key: "senior_disability",
+    prompt: "Is anyone in your household a senior (65+) or living with a disability?",
+  },
 ];
 
 export function missingCoreFields(profile: ClientProfile): typeof CORE_REQUIRED_FIELDS {
   return CORE_REQUIRED_FIELDS.filter((f) => {
     if (f.key === "monthly_income_gross") {
       return profile.monthly_income_gross == null && profile.annual_income_gross == null;
+    }
+    if (f.key === "senior_disability") {
+      return missingSeniorDisabilityField(profile);
     }
     return profile[f.key] == null;
   });
