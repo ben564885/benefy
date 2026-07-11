@@ -1,0 +1,41 @@
+parameters: {}
+environment: {}
+packages:
+    - name: benefy
+      shared: false
+      environment:
+        BENEFY_APP_URL: "__BENEFY_APP_URL__"
+        FUNCTIONS_SHARED_SECRET: "__FUNCTIONS_SHARED_SECRET__"
+      parameters: {}
+      annotations: {}
+      functions:
+        - name: update-profile
+          binary: false
+          main: main
+          runtime: nodejs:18
+          web: true
+          webSecure: false
+          parameters: {}
+          environment: {}
+          annotations: {}
+          limits: {}
+        - name: check-eligibility
+          binary: false
+          main: main
+          runtime: nodejs:18
+          web: true
+          webSecure: false
+          parameters: {}
+          environment: {}
+          annotations: {}
+          limits: {}
+        - name: get-screening
+          binary: false
+          main: main
+          runtime: nodejs:18
+          web: true
+          webSecure: false
+          parameters: {}
+          environment: {}
+          annotations: {}
+          limits: {}

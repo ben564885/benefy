@@ -71,7 +71,7 @@ export default async function ApplicationPage({
           )}
 
           <p className="text-xs text-slate-400">
-            Generated {new Date(outcome.data.generated_at).toLocaleString()} · This is a draft pre-fill only. Benefind
+            Generated {new Date(outcome.data.generated_at).toLocaleString()} · This is a draft pre-fill only. Benefy
             does not submit applications electronically — the caseworker must review and submit through the official
             channel above.
           </p>

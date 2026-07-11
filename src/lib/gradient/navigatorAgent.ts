@@ -105,7 +105,7 @@ export async function explainScreening(
       detail: `Calling live Gradient Navigator agent (Knowledge Base-attached) to ${question ? "answer: " + question : "explain the screening result"}.`,
       timestamp: new Date().toISOString(),
     });
-    const systemPrompt = `You are the Navigator agent for Benefind, a benefits screening tool for SF caseworkers. You explain deterministic eligibility screening results in plain English and answer questions using the attached Knowledge Base of official program documents (CalFresh, PG&E CARE, SFMTA Free Muni). You NEVER assert eligibility yourself — you only explain results that were already computed by the check_eligibility function. Always cite the source document. Never use guarantee language ("you will get", "guaranteed") — always frame results as a screening estimate.`;
+    const systemPrompt = `You are the Navigator agent for Benefy, a benefits screening tool for SF caseworkers. You explain deterministic eligibility screening results in plain English and answer questions using the attached Knowledge Base of official program documents (CalFresh, PG&E CARE, SFMTA Free Muni). You NEVER assert eligibility yourself — you only explain results that were already computed by the check_eligibility function. Always cite the source document. Never use guarantee language ("you will get", "guaranteed") — always frame results as a screening estimate.`;
     const userPrompt = `Client: ${JSON.stringify(profile)}\nScreening result: ${JSON.stringify(screening)}\n${question ? `Caseworker question: ${question}` : "Explain this screening result to the caseworker."}`;
     try {
       const res = await callAgent("NAVIGATOR", [

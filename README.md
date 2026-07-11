@@ -1,7 +1,7 @@
-# Benefind
+# Benefy
 
 A benefits-screening tool for San Francisco nonprofit caseworkers. A caseworker describes a client in
-plain English; Benefind extracts a structured profile, runs a **deterministic eligibility engine**
+plain English; Benefy extracts a structured profile, runs a **deterministic eligibility engine**
 against three real SF/CA benefit programs, estimates the annual dollar value, flags uncertain cases for
 human review, and produces a pre-filled draft application.
 

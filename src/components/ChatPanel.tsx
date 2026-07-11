@@ -60,7 +60,7 @@ export default function ChatPanel({ messages, onSend, disabled, placeholder }: P
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           disabled={disabled || sending}
-          placeholder={placeholder ?? "Tell Benefind about the client…"}
+          placeholder={placeholder ?? "Tell Benefy about the client…"}
           className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-500 disabled:bg-slate-50"
         />
         <button

@@ -1,0 +1,17 @@
+name: benefy
+region: sfo3
+services:
+  - name: web
+    github:
+      repo: ben564885/benefy
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: FUNCTIONS_SHARED_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: "REPLACED_AT_DEPLOY_TIME"

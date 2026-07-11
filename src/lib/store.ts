@@ -12,7 +12,7 @@ interface Store {
 // process (this is a demo app: no auth, no persistence beyond process lifetime,
 // per spec §9 "In-memory or SQLite/JSON storage — no auth").
 // Stashed on globalThis so Next.js dev-mode hot reload doesn't wipe seeded data.
-const globalForStore = globalThis as unknown as { __benefindStore?: Store };
+const globalForStore = globalThis as unknown as { __benefyStore?: Store };
 
 function seed(): Store {
   const clients = new Map<string, ClientRecord>();
@@ -22,8 +22,8 @@ function seed(): Store {
   return { clients, chatHistory: new Map(), traces: new Map() };
 }
 
-const store = globalForStore.__benefindStore ?? seed();
-globalForStore.__benefindStore = store;
+const store = globalForStore.__benefyStore ?? seed();
+globalForStore.__benefyStore = store;
 
 export function listClients(): ClientRecord[] {
   return Array.from(store.clients.values());

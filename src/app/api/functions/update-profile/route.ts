@@ -20,7 +20,7 @@ function missingRequired(profile: ClientProfile): string[] {
   return missing;
 }
 
-// Flat-scalar input contract — this is what the `benefind-update-profile` DO
+// Flat-scalar input contract — this is what the `benefy-update-profile` DO
 // Function relays here (see GRADIENT_SETUP.md §1). Arrays are passed as CSV
 // strings because DO Functions / agent tool-call schemas only accept
 // string/boolean/number parameters.

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Benefind — SF Benefits Screening",
+  title: "Benefy — SF Benefits Screening",
   description:
     "Benefits-screening tool for San Francisco caseworkers: deterministic eligibility, Gradient AI-guided intake, and pre-filled applications.",
 };

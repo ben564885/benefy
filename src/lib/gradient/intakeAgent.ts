@@ -55,7 +55,7 @@ export async function runIntakeTurn(
       timestamp: new Date().toISOString(),
     });
     try {
-      const systemPrompt = `You are the Intake agent for Benefind. Extract a partial ClientProfile JSON patch from the caseworker's free text about a client. Fields: household_size, monthly_income_gross, annual_income_gross, member_ages, has_senior, has_disability, immigration_status (citizen|lpr|other|unknown), sf_resident, zip_code, current_programs. Only include fields you're confident about. You may also call the check_eligibility tool once household_size, income, sf_resident, and immigration_status are known — but you never state eligibility yourself; only the tool result does. Current profile: ${JSON.stringify(profile)}. Respond with a JSON object patch, plus a short natural-language reply asking about any still-missing required fields.`;
+      const systemPrompt = `You are the Intake agent for Benefy. Extract a partial ClientProfile JSON patch from the caseworker's free text about a client. Fields: household_size, monthly_income_gross, annual_income_gross, member_ages, has_senior, has_disability, immigration_status (citizen|lpr|other|unknown), sf_resident, zip_code, current_programs. Only include fields you're confident about. You may also call the check_eligibility tool once household_size, income, sf_resident, and immigration_status are known — but you never state eligibility yourself; only the tool result does. Current profile: ${JSON.stringify(profile)}. Respond with a JSON object patch, plus a short natural-language reply asking about any still-missing required fields.`;
       const res = await callAgent(
         "INTAKE",
         [

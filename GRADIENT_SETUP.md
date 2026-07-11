@@ -30,13 +30,13 @@ this file's design is approved — noted again at the bottom with the exact list
 
 | Resource | Name |
 |---|---|
-| Functions namespace | `benefind-functions` |
-| Function: profile upsert | `benefind-update-profile` |
-| Function: run screening | `benefind-check-eligibility` |
-| Function: fetch last screening | `benefind-get-screening` |
-| Agent | `benefind-intake` (parent) |
-| Agent | `benefind-navigator` (child, routed to) |
-| Knowledge Base | `benefind-program-docs` |
+| Functions namespace | `benefy-functions` |
+| Function: profile upsert | `benefy-update-profile` |
+| Function: run screening | `benefy-check-eligibility` |
+| Function: fetch last screening | `benefy-get-screening` |
+| Agent | `benefy-intake` (parent) |
+| Agent | `benefy-navigator` (child, routed to) |
+| Knowledge Base | `benefy-program-docs` |
 
 Three functions, not one. Splitting `update_client_profile` (mutates state, called every turn) from
 `check_eligibility` (computes a verdict, called once ready) mirrors the "live profile panel"
@@ -49,11 +49,11 @@ eligibility" for *both* agents.
 
 ## 1. Functions (deploy first — agents reference these by name)
 
-Deploy via `doctl serverless deploy` to namespace `benefind-functions`, Node.js 18, each a **web
+Deploy via `doctl serverless deploy` to namespace `benefy-functions`, Node.js 18, each a **web
 function** returning `{ body: {...} }`. This is the direct serverless deployment of the logic already
 in `src/lib/engine.ts` / `src/lib/store.ts`.
 
-### `benefind-update-profile` / `benefind-check-eligibility` / `benefind-get-screening`
+### `benefy-update-profile` / `benefy-check-eligibility` / `benefy-get-screening`
 
 Same three functions and I/O shapes as before (see prior revision) — `update-profile` takes flat
 scalar params (`household_size`, `monthly_income_gross`, `member_ages_csv`, etc.) and persists them;
@@ -74,14 +74,14 @@ Body (`apiLinkAgentFunctionInputPublic` — exact fields from the spec):
   "agent_uuid": "<intake_agent_uuid>",
   "function_name": "check_eligibility",
   "description": "Runs the deterministic eligibility engine for a client and returns likely_eligible / likely_ineligible / needs_review per program. This is the only source of truth for eligibility — never answer without calling it.",
-  "faas_name": "benefind-check-eligibility",
-  "faas_namespace": "benefind-functions",
+  "faas_name": "benefy-check-eligibility",
+  "faas_namespace": "benefy-functions",
   "input_schema": { "type": "object", "properties": { "client_id": { "type": "string" } }, "required": ["client_id"] },
   "output_schema": { "type": "object" }
 }
 ```
 
-Repeat for `benefind-update-profile` and `benefind-get-screening` (the latter attached to the
+Repeat for `benefy-update-profile` and `benefy-get-screening` (the latter attached to the
 Navigator agent instead).
 
 ---
@@ -95,17 +95,17 @@ Authorization: Bearer $DIGITALOCEAN_TOKEN
 
 ```json
 {
-  "name": "benefind-intake",
+  "name": "benefy-intake",
   "model_uuid": "<from GET /v2/gen-ai/models>",
   "instruction": "<see system prompt below>",
-  "description": "Benefind Intake Agent",
+  "description": "Benefy Intake Agent",
   "project_id": "<your project id>",
   "region": "tor1",
-  "tags": ["benefind"]
+  "tags": ["benefy"]
 }
 ```
 
-Repeat for `benefind-navigator`, additionally passing `"knowledge_base_uuid": ["<kb_uuid>"]` (§5).
+Repeat for `benefy-navigator`, additionally passing `"knowledge_base_uuid": ["<kb_uuid>"]` (§5).
 Note `model_uuid` is looked up from the model catalog (`GET /v2/gen-ai/models` or via console) — pick
 a strong instruction-following model for Intake (clean structured extraction + tool calls) and any
 capable model for Navigator. Two other create-agent fields worth using: `web_fetch_enabled: true` on
@@ -115,7 +115,7 @@ yet, and `region` should match wherever the app is deployed to minimize latency.
 ### Intake Agent — `instruction` field
 
 ```
-You are the Intake Agent for Benefind, a benefits-screening tool used by San Francisco nonprofit
+You are the Intake Agent for Benefy, a benefits-screening tool used by San Francisco nonprofit
 caseworkers. Your job is to turn a caseworker's free-text description of a client into a structured
 client profile by calling functions. You are never the source of truth for anything — only function
 results are.
@@ -145,7 +145,7 @@ Tone: concise, professional, caseworker-to-caseworker. Not a chatbot persona.
 ### Navigator Agent — `instruction` field
 
 ```
-You are the Navigator Agent for Benefind. Your job is to explain benefits screening results to San
+You are the Navigator Agent for Benefy. Your job is to explain benefits screening results to San
 Francisco caseworkers in plain English, grounded in the attached Knowledge Base of official CalFresh,
 PG&E CARE, and SFMTA Free Muni program documents, and to answer follow-up questions (required
 documents, how to apply, what a status means).
@@ -181,8 +181,8 @@ Body (`apiLinkAgentInputPublic` — exact fields):
 
 ```json
 {
-  "parent_agent_uuid": "<benefind-intake uuid>",
-  "child_agent_uuid": "<benefind-navigator uuid>",
+  "parent_agent_uuid": "<benefy-intake uuid>",
+  "child_agent_uuid": "<benefy-navigator uuid>",
   "route_name": "explain_and_navigate",
   "if_case": "Use this when the caseworker is asking the assistant to explain an already-computed result, asking why a status is what it is, asking what documents are needed, asking how to apply, asking what a needs_review flag means, or otherwise asking about a completed screening rather than providing new facts about the client."
 }
@@ -190,7 +190,7 @@ Body (`apiLinkAgentInputPublic` — exact fields):
 
 `if_case` is the exact field the platform uses to decide when to hand off — it's natural language,
 matching the example in the spec (`"use this to get weather information"`). With this in place, our
-app talks to **one endpoint** (`benefind-intake`'s), and the platform itself decides whether Intake
+app talks to **one endpoint** (`benefy-intake`'s), and the platform itself decides whether Intake
 answers directly or hands off to Navigator. `router.ts` in the current codebase becomes redundant and
 should be deleted once this is live — a judge should see real platform routing, not our own if/else
 standing in for it.
@@ -208,11 +208,11 @@ Authorization: Bearer $DIGITALOCEAN_TOKEN
 
 ```json
 {
-  "name": "benefind-program-docs",
+  "name": "benefy-program-docs",
   "embedding_model_uuid": "<from GET /v2/gen-ai/models, an embedding model>",
   "project_id": "<your project id>",
   "region": "tor1",
-  "tags": ["benefind"],
+  "tags": ["benefy"],
   "datasources": [
     {
       "web_crawler_data_source": {
@@ -258,7 +258,7 @@ retrieval, which matters here because the exact number in a table cell is only m
 row/column headers. **Reranking is enabled** — a legitimate RAG-quality feature worth naming in the
 pitch, not just "we did basic RAG."
 
-Attach the KB to `benefind-navigator` only, via `knowledge_base_uuid` on agent create/update (§2) or:
+Attach the KB to `benefy-navigator` only, via `knowledge_base_uuid` on agent create/update (§2) or:
 ```
 POST /v2/gen-ai/agents/{agent_uuid}/knowledge_bases/{knowledge_base_uuid}
 ```
@@ -315,7 +315,7 @@ Authorization: Bearer $DIGITALOCEAN_TOKEN
 ```json
 {
   "test_case_uuid": "<from POST /v2/gen-ai/evaluation_test_cases>",
-  "agent_uuids": ["<benefind-intake uuid>", "<benefind-navigator uuid>"],
+  "agent_uuids": ["<benefy-intake uuid>", "<benefy-navigator uuid>"],
   "run_name": "never-asserts-eligibility-check"
 }
 ```
@@ -352,9 +352,9 @@ Run this after any change to instructions, functions, routing, or model — that
 ## 7. Runtime env vars for the app (App Platform)
 
 ```
-GRADIENT_INTAKE_AGENT_ENDPOINT=https://<benefind-intake-uuid>.agents.do-ai.run
+GRADIENT_INTAKE_AGENT_ENDPOINT=https://<benefy-intake-uuid>.agents.do-ai.run
 GRADIENT_INTAKE_AGENT_ACCESS_KEY=<agent access key, created via POST /v2/gen-ai/agents/{uuid}/api_keys or the agent's Settings tab>
-GRADIENT_NAVIGATOR_AGENT_ENDPOINT=https://<benefind-navigator-uuid>.agents.do-ai.run
+GRADIENT_NAVIGATOR_AGENT_ENDPOINT=https://<benefy-navigator-uuid>.agents.do-ai.run
 GRADIENT_NAVIGATOR_AGENT_ACCESS_KEY=<same, for the navigator agent>
 ```
 
