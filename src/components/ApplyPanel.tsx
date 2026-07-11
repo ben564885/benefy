@@ -168,6 +168,7 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
   }
 
   const programName = (id: string) => programs.find((p) => p.program_id === id)?.name ?? id;
+  const programFormUrl = (id: string) => programs.find((p) => p.program_id === id)?.application.form_url;
   const hasTransUnionProgram = Array.from(selected).includes("sfpuc_cap");
 
   return (
@@ -304,12 +305,27 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
               <div>
                 <p className="text-sm font-medium text-slate-900">{programName(s.program_id)}</p>
                 <p className="text-xs text-slate-500">{STATUS_LABEL[s.status]}</p>
-                {s.status === "needs_human" && s.error && <p className="mt-1 text-xs text-amber-700">{s.error}</p>}
+                {s.status === "needs_human" && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    {s.error ?? "We couldn't finish this one automatically."} Nothing was submitted — you can
+                    still apply yourself.
+                  </p>
+                )}
                 {s.status === "submitted" && s.receipt_note && (
                   <p className="mt-1 text-xs text-emerald-700">{s.receipt_note}</p>
                 )}
               </div>
               <div className="flex items-center gap-2">
+                {s.status === "needs_human" && programFormUrl(s.program_id) && (
+                  <a
+                    href={programFormUrl(s.program_id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Apply yourself ↗
+                  </a>
+                )}
                 {s.artifacts.length > 0 && (
                   <a
                     href={s.artifacts[s.artifacts.length - 1].url}

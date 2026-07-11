@@ -5,8 +5,11 @@ import { caleitcAdapter } from "./caleitc.js";
 import { pgeFeraAdapter } from "./pge_fera.js";
 import { liheapSfpesAdapter } from "./liheap_sfpes.js";
 import { caLifelineAdapter } from "./ca_lifeline.js";
-import { clipperStartAdapter } from "./clipper_start.js";
 
+// clipper_start is deliberately absent: it is apply_mode "assisted" in
+// src/config/programs.json, because its form is OTP-account-gated end to end
+// (see worker/README.md). Registering a stub adapter here just to fail every
+// job is worse than not offering to auto-apply at all.
 const ADAPTERS: Record<string, Adapter> = {
   sfpuc_cap: sfpucCapAdapter,
   pge_care: pgeCareAdapter,
@@ -14,7 +17,6 @@ const ADAPTERS: Record<string, Adapter> = {
   pge_fera: pgeFeraAdapter,
   liheap_sfpes: liheapSfpesAdapter,
   ca_lifeline: caLifelineAdapter,
-  clipper_start: clipperStartAdapter,
 };
 
 export function getAdapter(programId: string): Adapter | undefined {
