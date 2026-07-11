@@ -59,6 +59,43 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     setProfile(data.client.profile);
   }
 
+  // Fetches the Navigator explanation after the engine result is already on
+  // screen, and patches it into the newest results item. Fire-and-forget —
+  // the dollar reveal never waits on a language model.
+  function fillInExplanation() {
+    fetch(`/api/clients/${clientId}/explain`, { method: "POST" })
+      .then(async (res) => {
+        const data = await res.json();
+        setThread((prev) => {
+          const next = [...prev];
+          for (let i = next.length - 1; i >= 0; i--) {
+            const item = next[i];
+            if (item.kind === "results" && item.explanationPending) {
+              next[i] = res.ok
+                ? {
+                    ...item,
+                    explanation: data.explanation ?? null,
+                    explanationPending: false,
+                    citations: data.citations ?? [],
+                    mode: data.mode ?? null,
+                    trace: data.trace ?? item.trace,
+                  }
+                : { ...item, explanationPending: false };
+              break;
+            }
+          }
+          return next;
+        });
+      })
+      .catch(() => {
+        setThread((prev) =>
+          prev.map((item) =>
+            item.kind === "results" && item.explanationPending ? { ...item, explanationPending: false } : item,
+          ),
+        );
+      });
+  }
+
   async function runScreen() {
     setScreeningLoading(true);
     try {
@@ -69,12 +106,14 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
         kind: "results",
         screening: data.screening as ScreeningResult,
         explanation: data.explanation ?? null,
+        explanationPending: data.explanation == null,
         citations: data.citations ?? [],
         mode: data.mode ?? null,
         trace: data.trace ?? [],
       };
       setThread((prev) => [...prev, resultsItem]);
       setHasScreening(true);
+      if (data.explanation == null) fillInExplanation();
     } finally {
       setScreeningLoading(false);
     }

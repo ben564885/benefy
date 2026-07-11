@@ -77,13 +77,20 @@ your free text / quick-reply chips / voice
 ### Three backends, tried in order (what's live, honestly)
 
 1. **DigitalOcean Agent Platform** *(live)* — `benefy-intake` / `benefy-navigator` managed agents
-   with real attached DO Functions. The platform invokes the deployed functions itself; our app only
-   sees the side effects and the final reply.
+   with real attached DO Functions, a real `explain_and_navigate` agent route between them, and a
+   Knowledge Base indexing official program pages (GetCalFresh, SF HSA, SFMTA, PG&E). The platform
+   invokes the deployed functions itself; our app only sees the side effects and the final reply.
 2. **DigitalOcean Serverless Inference** *(live)* — direct `llama3.3-70b-instruct` calls with real
-   tool-calling orchestrated in our backend (`inferenceClient.ts`), used if an agent call errors.
+   tool-calling orchestrated in our backend (`inferenceClient.ts`), used if an agent call errors or
+   exceeds its deadline (`GRADIENT_AGENT_TIMEOUT_MS`, default 15s — live platform calls have been
+   observed taking 30–80s, and the UI never waits that long).
 3. **Local heuristic fallback** — a conservative regex extractor and template explanations grounded
    in `programs.json`, so the demo never hard-fails. The UI labels every explanation with its mode
    (`live_gradient_agent` / `live_inference` / `local_fallback`) — this is never hidden.
+
+The screening result itself renders instantly in all three tiers — the deterministic engine never
+waits on a model; the Navigator's plain-language explanation loads asynchronously after the dollar
+reveal (`/api/clients/[id]/explain`).
 
 Voice intake ("Voice (beta)") uses the OpenAI Realtime API — labeled here because it's the one
 AI piece that is *not* DigitalOcean; its extracted fields flow into the exact same profile store and
@@ -129,6 +136,11 @@ modeled honestly return `needs_review` rather than a guess.
 - `tests/evals.test.ts` — the agent-evaluation harness (`src/lib/gradient/evals.ts`), including the
   explicit "Navigator never asserts eligibility beyond the engine's actual verdict" check, run
   through the real guardrails.
+
+The same honesty contract is also measured on the platform itself: a 10-query golden dataset
+(`benefy-honesty-golden-set`) runs through **DigitalOcean Agent Evaluations** against the live
+Navigator agent (`benefy-navigator-honesty` test case), scoring ground-truth faithfulness,
+instruction following, hallucination, context adherence, and prompt-injection resistance.
 
 ## Demo
 

@@ -69,6 +69,7 @@ async function callInference(
       ...(tools ? { tools, tool_choice: toolChoice ?? "auto" } : {}),
       max_completion_tokens: 800,
     }),
+    signal: AbortSignal.timeout(Number(process.env.GRADIENT_INFERENCE_TIMEOUT_MS) || 30_000),
   });
 
   if (!res.ok) {

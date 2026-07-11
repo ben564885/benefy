@@ -16,6 +16,7 @@ export type ThreadItem =
       kind: "results";
       screening: ScreeningResult;
       explanation: string | null;
+      explanationPending?: boolean;
       citations: { program_id: string; source: string; url: string }[];
       mode: "live_gradient_agent" | "live_inference" | "local_fallback" | null;
       trace: TraceStep[];
@@ -196,6 +197,7 @@ export default function ChatPanel({
               screening={item.screening}
               programs={programs}
               explanation={item.explanation}
+              explanationPending={item.explanationPending}
               citations={item.citations}
               mode={item.mode}
               trace={item.trace}

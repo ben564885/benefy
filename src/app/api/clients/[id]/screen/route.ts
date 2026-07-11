@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireOwnedClient } from "@/lib/auth";
 import { executeCheckEligibility } from "@/lib/gradient/tools";
-import { explainScreening } from "@/lib/gradient/navigatorAgent";
 import { getTrace, screenAndStore, setTrace } from "@/lib/store";
 import type { TraceStep } from "@/lib/types";
 
@@ -38,22 +37,18 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     timestamp: new Date().toISOString(),
   });
 
-  const explanation = await explainScreening(updated.profile, updated.last_screening, null, trace, id);
-  trace.push({
-    step: "navigator_explanation_ready",
-    actor: "navigator_agent",
-    detail: "Navigator agent explained the function's result to the user; it did not compute eligibility itself.",
-    timestamp: new Date().toISOString(),
-  });
   await setTrace(id, trace);
 
+  // The engine result returns immediately — the Navigator's plain-language
+  // explanation can take many seconds on the live Agent Platform, so the
+  // client fetches it separately via POST /explain and fills it in when it
+  // lands. The dollar reveal must never wait on a language model.
   return NextResponse.json({
     client: updated,
     screening: updated.last_screening,
-    explanation: explanation.text,
-    citations: explanation.citations,
-    guardrail_violations: explanation.guardrail_violations,
-    mode: explanation.mode,
+    explanation: null,
+    citations: [],
+    mode: null,
     trace,
   });
 }

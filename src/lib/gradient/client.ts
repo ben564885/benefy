@@ -72,6 +72,11 @@ export async function callAgent(
     );
   }
 
+  // Live agent calls have been observed taking 30–80s on this platform.
+  // Without a deadline they block the whole turn; with one, the caller's
+  // tier-degradation (Agent Platform → Serverless Inference → local) kicks
+  // in fast enough to keep the UI responsive.
+  const timeoutMs = Number(process.env.GRADIENT_AGENT_TIMEOUT_MS) || 15_000;
   const res = await fetch(`${endpoint.replace(/\/$/, "")}/api/v1/chat/completions`, {
     method: "POST",
     headers: {
@@ -83,6 +88,7 @@ export async function callAgent(
       ...(tools ? { tools, tool_choice: "auto" } : {}),
       stream: false,
     }),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!res.ok) {

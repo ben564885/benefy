@@ -11,6 +11,7 @@ interface Props {
   screening: ScreeningResult;
   programs: ProgramDefinition[];
   explanation: string | null;
+  explanationPending?: boolean;
   citations: { program_id: string; source: string; url: string }[];
   mode: "live_gradient_agent" | "live_inference" | "local_fallback" | null;
   trace: TraceStep[];
@@ -23,6 +24,7 @@ export default function ResultsCard({
   screening,
   programs,
   explanation,
+  explanationPending,
   citations,
   mode,
   trace,
@@ -63,6 +65,12 @@ export default function ResultsCard({
           />
         ))}
       </div>
+
+      {!explanation && explanationPending && (
+        <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+          <p className="animate-pulse text-sm text-slate-400">Writing your plain-language explanation…</p>
+        </div>
+      )}
 
       {explanation && (
         <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
