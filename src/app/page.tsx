@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import MarqueeRow from "@/components/landing/MarqueeRow";
 import IntakeMockup from "@/components/landing/IntakeMockup";
@@ -50,11 +51,8 @@ export default function HomePage() {
   return (
     <main className="flex-1 bg-white text-slate-900">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-teal-700 text-sm font-bold text-white">
-            B
-          </span>
-          Benefy
+        <Link href="/" className="flex items-center">
+          <Image src="/logo_benefy.png" alt="Benefy" width={546} height={222} className="h-7 w-auto" priority />
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
