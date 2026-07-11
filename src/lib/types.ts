@@ -20,20 +20,43 @@ export interface ClientProfile {
   last_screened_at: string | null;
 }
 
-export type IncomeTestType = "fpl_pct" | "ami_pct";
+// fpl_pct / ami_pct: standard percent-of-basis test against the shared FPL/AMI
+// tables (fpl_table.json / ami_table.json).
+// dollar_table: a program-specific income ceiling table (e.g. PG&E FERA's own
+// schedule), shaped like value_estimate's table_by_household_size.
+// flat_annual_income_cap: a single dollar ceiling not scaled by household size
+// (e.g. CalEITC's earned-income cap).
+// none: no income test at all — eligibility here turns entirely on the other
+// gates (categorical/immigration/sf_resident/senior_or_disabled).
+// manual: a real income/asset test exists but isn't expressible as a simple
+// percentage or dollar ceiling (SSI-style countable-income exclusions, asset
+// limits, funding-limited priority systems) — always resolves to needs_review
+// rather than guessing, unless a categorical_pass hit or hard gate applies.
+export type IncomeTestType = "fpl_pct" | "ami_pct" | "dollar_table" | "flat_annual_income_cap" | "none" | "manual";
 
 export interface ProgramDefinition {
   program_id: string;
   name: string;
-  level: "state" | "utility" | "sf_local";
+  level: "federal" | "state" | "county" | "sf_local" | "regional" | "utility";
   administered_by: string;
   short_description: string;
   required_documents?: string[];
   eligibility: {
-    income_test: { basis: "annual_gross"; type: IncomeTestType; max_pct: number };
+    income_test: {
+      basis: "annual_gross";
+      type: IncomeTestType;
+      max_pct?: number;
+      dollar_table?: { annual_by_household_size: Record<string, number>; additional_person_annual: number };
+      max_amount?: number;
+    };
     categorical_pass: string[];
     requires_sf_resident: boolean;
     immigration_sensitive: boolean;
+    // If set, only these immigration statuses can pass this gate at all (e.g.
+    // CAPI is only for noncitizens ineligible for SSI due to status — citizens
+    // should apply to SSI instead). Independent of immigration_sensitive,
+    // which governs the "unknown/other → needs_review" caution downstream.
+    immigration_required?: ImmigrationStatus[];
     requires_senior_or_disabled: boolean;
     senior_age_cutoff?: number;
   };

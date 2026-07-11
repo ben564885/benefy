@@ -17,7 +17,7 @@ import { GET_SCREENING_TOOL } from "@/lib/gradient/tools";
 import { applyGuardrails } from "@/lib/gradient/guardrails";
 import { getAllPrograms, getProgram } from "@/lib/engine";
 import { getClient } from "@/lib/store";
-import type { ClientProfile, EligibilityResult, ScreeningResult, TraceStep } from "@/lib/types";
+import type { ClientProfile, EligibilityResult, ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 
 export interface NavigatorResponse {
   text: string;
@@ -93,6 +93,24 @@ function localFallbackAnswer(question: string, profile: ClientProfile, screening
 // injected directly into the system prompt. Not retrieval — but the model
 // still can't cite a rule that isn't in this text, since it's the only
 // "knowledge" it has.
+function incomeLimitText(p: ProgramDefinition): string {
+  const test = p.eligibility.income_test;
+  switch (test.type) {
+    case "fpl_pct":
+      return `${test.max_pct}% of Federal Poverty Level`;
+    case "ami_pct":
+      return `${test.max_pct}% of Bay Area Area Median Income`;
+    case "dollar_table":
+      return `program-specific income table by household size (see ${p.name}'s own schedule)`;
+    case "flat_annual_income_cap":
+      return `a flat annual income cap of $${test.max_amount?.toLocaleString()}`;
+    case "none":
+      return "no income test";
+    case "manual":
+      return "a non-standard income/asset test this tool cannot compute directly — always needs_review on income";
+  }
+}
+
 function buildProgramReferenceText(): string {
   return getAllPrograms()
     .map((p) => {
@@ -104,7 +122,7 @@ function buildProgramReferenceText(): string {
       const docs = p.required_documents?.join("; ") ?? "see official application";
       return `### ${p.name} (${p.level}, administered by ${p.administered_by})
 ${p.short_description}
-Income limit: ${p.eligibility.income_test.max_pct}% of ${p.eligibility.income_test.type === "fpl_pct" ? "Federal Poverty Level" : "Bay Area Area Median Income"}.
+Income limit: ${incomeLimitText(p)}.
 Categorical pass programs: ${p.eligibility.categorical_pass.join(", ") || "none"}.
 Estimated value: ${value}.
 Required documents: ${docs}.

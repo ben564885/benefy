@@ -160,4 +160,56 @@ describe("deterministic eligibility engine", () => {
       expect(["likely_eligible", "likely_ineligible", "needs_review"]).toContain(r.status);
     }
   });
+
+  it("always resolves 'manual' income tests to needs_review, never a guessed eligible/ineligible", () => {
+    // SSI/SSP: manual income test, plausible senior/citizen profile with no categorical hit.
+    const profile = makeProfile({ has_senior: true, member_ages: [70, 8, 5], monthly_income_gross: 900 });
+    const results = evaluate(profile);
+    const ssi = results.find((r) => r.program_id === "ssi_ssp")!;
+    expect(ssi.status).toBe("needs_review");
+    expect(ssi.review_triggers).toContain("income_test_not_modeled");
+  });
+
+  it("still hard-gates a 'manual' income test program on senior/disability status", () => {
+    const profile = makeProfile({ has_senior: false, has_disability: false });
+    const results = evaluate(profile);
+    const ssi = results.find((r) => r.program_id === "ssi_ssp")!;
+    expect(ssi.status).toBe("likely_ineligible");
+  });
+
+  it("grants a 'none' income test program (Clipper Access) once the disability gate is met, with no income question", () => {
+    const profile = makeProfile({ has_disability: true, monthly_income_gross: 50000 });
+    const results = evaluate(profile);
+    const rtc = results.find((r) => r.program_id === "clipper_access_rtc")!;
+    expect(rtc.status).toBe("likely_eligible");
+    expect(rtc.income_pct_fpl).toBeNull();
+  });
+
+  it("evaluates PG&E FERA against its own dollar table, not the FPL table", () => {
+    // Household of 3, FERA limit is $68,300 — well under. CalFresh's 200% FPL for HH3 is $54,640, so
+    // this income would fail CalFresh but should pass FERA, proving the two use different bases.
+    const profile = makeProfile({ household_size: 3, monthly_income_gross: null, annual_income_gross: 60000 });
+    const results = evaluate(profile);
+    const calfresh = results.find((r) => r.program_id === "calfresh")!;
+    const fera = results.find((r) => r.program_id === "pge_fera")!;
+    expect(calfresh.status).toBe("likely_ineligible");
+    expect(fera.status).toBe("likely_eligible");
+  });
+
+  it("restricts CAPI to noncitizens via immigration_required, hard-gating citizens to likely_ineligible", () => {
+    const profile = makeProfile({ immigration_status: "citizen", has_senior: true, member_ages: [70] });
+    const results = evaluate(profile);
+    const capi = results.find((r) => r.program_id === "capi")!;
+    expect(capi.status).toBe("likely_ineligible");
+    expect(capi.reason).toMatch(/restricted to specific immigration statuses/);
+  });
+
+  it("lets a qualifying noncitizen continue past the CAPI immigration_required gate", () => {
+    const profile = makeProfile({ immigration_status: "lpr", has_senior: true, member_ages: [70] });
+    const results = evaluate(profile);
+    const capi = results.find((r) => r.program_id === "capi")!;
+    // Manual income test still applies, so this resolves to needs_review — the point is it's NOT
+    // hard-gated to likely_ineligible the way a citizen profile is.
+    expect(capi.status).toBe("needs_review");
+  });
 });

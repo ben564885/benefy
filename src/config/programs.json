@@ -117,5 +117,520 @@
         "zip_code": "field_zip_code"
       }
     }
+  },
+  {
+    "program_id": "medi_cal_magi",
+    "name": "Medi-Cal (Adult Expansion)",
+    "level": "state",
+    "administered_by": "CA Dept. of Health Care Services / SF Human Services Agency",
+    "short_description": "Free or low-cost health coverage for low-income California adults 19-64. Note: as of 1/1/2026, new undocumented adult applicants get restricted-scope coverage only, not full-scope — this screener flags uncertain immigration status for review rather than guessing which scope applies.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "fpl_pct", "max_pct": 138 },
+      "categorical_pass": ["CalWORKs", "SSI", "CAPI"],
+      "requires_sf_resident": false,
+      "immigration_sensitive": true,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Illustrative estimate using DHCS's average total Medi-Cal spending per enrollee (all funding sources), not a cash payment — actual value is health coverage, not dollars in hand.",
+      "_source": "KFF, Medicaid in California fact sheet (May 2025), FY2024 average cost of $10,100/enrollee. https://files.kff.org/attachment/fact-sheet-medicaid-state-CA",
+      "annual_value": 10100
+    },
+    "required_documents": [
+      "Proof of identity",
+      "Proof of income for all household members",
+      "Proof of CA/SF residency",
+      "Immigration status documents (determines full-scope vs. restricted-scope coverage)"
+    ],
+    "application": {
+      "form_name": "Medi-Cal Application (BenefitsCal)",
+      "form_url": "https://benefitscal.com",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "monthly_income_gross": "field_monthly_income",
+        "zip_code": "field_zip_code",
+        "sf_resident": "field_ca_resident",
+        "immigration_status": "field_immigration_status"
+      }
+    }
+  },
+  {
+    "program_id": "ssi_ssp",
+    "name": "SSI/SSP (Supplemental Security Income / State Supplementary Payment)",
+    "level": "federal",
+    "administered_by": "Social Security Administration / CA Dept. of Social Services (state supplement)",
+    "short_description": "Monthly cash benefit for people 65+, blind, or disabled with limited income and resources; California adds a state supplement on top of the federal payment.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "manual" },
+      "categorical_pass": [],
+      "requires_sf_resident": false,
+      "immigration_sensitive": true,
+      "requires_senior_or_disabled": true,
+      "senior_age_cutoff": 65
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Combined federal SSI + CA SSP maximum monthly payment for one person living independently, times 12. Actual determination uses SSA's own countable-income/resource test with exclusions this screener does not model (asset limit ~$2,000 individual) — couples receive more (~$25,186/yr combined).",
+      "_source": "SSA 2026 COLA fact sheet (effective Dec 2025 payments) + CA SSP payment standard, $1,233.94/mo individual independent-living rate. https://www.ssa.gov/news/en/press/releases/2025-10-24.html",
+      "annual_value": 14807
+    },
+    "required_documents": [
+      "Proof of identity and SSN",
+      "Proof of income and resources",
+      "Medical evidence of disability, if applicable",
+      "Immigration status documents"
+    ],
+    "application": {
+      "form_name": "SSI Application",
+      "form_url": "https://www.ssa.gov/apply/ssi",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "monthly_income_gross": "field_monthly_income",
+        "has_disability": "field_disability_status",
+        "member_ages": "field_applicant_age",
+        "immigration_status": "field_immigration_status"
+      }
+    }
+  },
+  {
+    "program_id": "capi",
+    "name": "CAPI (Cash Assistance Program for Immigrants)",
+    "level": "state",
+    "administered_by": "CA Dept. of Social Services / SF Human Services Agency",
+    "short_description": "State-funded cash aid mirroring SSI/SSP for aged, blind, or disabled noncitizens who are ineligible for SSI solely because of their immigration status.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "manual" },
+      "categorical_pass": [],
+      "requires_sf_resident": false,
+      "immigration_sensitive": true,
+      "immigration_required": ["lpr", "other", "unknown"],
+      "requires_senior_or_disabled": true,
+      "senior_age_cutoff": 65
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "CAPI mirrors the SSI/SSP payment standard for one person living independently. Actual determination requires proof of an SSI denial due to immigration status within the prior 6 months, plus SSA-style income/asset exclusions this screener does not model.",
+      "_source": "CDSS CAPI program page, 2026 payment standards. https://www.cdss.ca.gov/capi",
+      "annual_value": 14807
+    },
+    "required_documents": [
+      "Immigration documents",
+      "SSI denial letter (due to immigration status)",
+      "Proof of income and resources",
+      "Rental agreement or proof of living arrangement"
+    ],
+    "application": {
+      "form_name": "CAPI Application (SOC 814)",
+      "form_url": "https://www.cdss.ca.gov/capi",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "monthly_income_gross": "field_monthly_income",
+        "has_disability": "field_disability_status",
+        "member_ages": "field_applicant_age",
+        "immigration_status": "field_immigration_status"
+      }
+    }
+  },
+  {
+    "program_id": "ihss",
+    "name": "In-Home Supportive Services (IHSS)",
+    "level": "state",
+    "administered_by": "CA Dept. of Social Services / SF Human Services Agency",
+    "short_description": "Funds an in-home caregiver (help with bathing, cooking, mobility, etc.) for aged, blind, or disabled Californians who are Medi-Cal eligible and live in their own home.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "manual" },
+      "categorical_pass": ["Medi-Cal"],
+      "requires_sf_resident": false,
+      "immigration_sensitive": true,
+      "requires_senior_or_disabled": true,
+      "senior_age_cutoff": 65
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Illustrative: statewide average authorized hours/month times SF's IHSS provider wage, times 12. Actual hours are set by an individualized in-home functional needs assessment, not an income formula.",
+      "_source": "LAO, The 2026-27 Budget: In-Home Supportive Services (127 hrs/mo statewide average, 2026-27) x SFHSA IHSS provider wage $23.00/hr (2026). https://lao.ca.gov/Publications/Report/5166 ; https://www.sfhsa.org/services/disability-aging/home-care/home-supportive-services-ihss/provide-home-supportive-services-ihss/become-ihss-provider/ihss-provider-wages",
+      "annual_value": 35052
+    },
+    "required_documents": [
+      "Proof of Medi-Cal eligibility",
+      "SOC 295 (Application for Social Services)",
+      "SOC 873 (Health Care Certification)",
+      "Medical/functional needs documentation"
+    ],
+    "application": {
+      "form_name": "IHSS Application (SOC 295)",
+      "form_url": "https://www.cdss.ca.gov/in-home-supportive-services",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "has_disability": "field_disability_status",
+        "member_ages": "field_applicant_age",
+        "current_programs": "field_existing_benefits"
+      }
+    }
+  },
+  {
+    "program_id": "caap_ga",
+    "name": "County Adult Assistance Programs (CAAP / General Assistance)",
+    "level": "county",
+    "administered_by": "SF Human Services Agency",
+    "short_description": "SF's cash aid of last resort for low-income adults without minor children in the household. Note: this screener cannot verify the \"no minor children\" requirement or the program's asset test — apply directly for a real determination.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "manual" },
+      "categorical_pass": [],
+      "requires_sf_resident": true,
+      "immigration_sensitive": true,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Current maximum monthly CAAP cash grant, times 12. Actual net-income ceiling (~$714/mo) and a personal-property/asset limit ($2,000 single) are not modeled here.",
+      "_source": "SFHSA CAAP program pages, accessed 2026. https://www.sfhsa.org/services/financial-assistance/county-adult-assistance-programs-caap",
+      "annual_value": 7428
+    },
+    "required_documents": [
+      "Proof of identity",
+      "Proof of SF residency",
+      "Income and expense verification"
+    ],
+    "application": {
+      "form_name": "CAAP Intake (via BenefitsCal + in-person appointment)",
+      "form_url": "https://www.sfhsa.org/services/financial-assistance/county-adult-assistance-programs-caap",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "monthly_income_gross": "field_monthly_income",
+        "zip_code": "field_zip_code",
+        "sf_resident": "field_sf_residency"
+      }
+    }
+  },
+  {
+    "program_id": "pge_fera",
+    "name": "PG&E FERA (Family Electric Rate Assistance)",
+    "level": "utility",
+    "administered_by": "Pacific Gas & Electric Co. / CPUC",
+    "short_description": "18% discount on the electric portion of your bill for households above CARE's income limit but below FERA's — a step up from PG&E CARE, not stackable with it.",
+    "eligibility": {
+      "income_test": {
+        "basis": "annual_gross",
+        "type": "dollar_table",
+        "dollar_table": {
+          "annual_by_household_size": {
+            "1": 54100,
+            "2": 54100,
+            "3": 68300,
+            "4": 82500,
+            "5": 96700,
+            "6": 110900,
+            "7": 125100,
+            "8": 139300
+          },
+          "additional_person_annual": 14200
+        }
+      },
+      "categorical_pass": [],
+      "requires_sf_resident": false,
+      "immigration_sensitive": false,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Average annual savings across PG&E's FERA-enrolled customers, most recently published figure.",
+      "_source": "PG&E 2024 program data: 39,000+ enrolled customers saved $21M+ total, averaging ~$45/month. https://www.stocktitan.net/news/PCG/expanding-access-more-pg-e-customers-eligible-for-18-electric-l9gqm2gpw25n.html",
+      "annual_value": 540
+    },
+    "required_documents": [
+      "Proof of household income (or self-attestation under penalty of perjury)",
+      "PG&E account number"
+    ],
+    "application": {
+      "form_name": "CARE/FERA Application",
+      "form_url": "https://energyinsight.pge.com/carefera?care_lang=english",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "annual_income_gross": "field_annual_income",
+        "zip_code": "field_zip_code"
+      }
+    }
+  },
+  {
+    "program_id": "liheap_sfpes",
+    "name": "LIHEAP Home Energy Assistance (via SFPES)",
+    "level": "state",
+    "administered_by": "CA Dept. of Community Services & Development, delivered locally by San Francisco-Peninsula Energy Services (SFPES)",
+    "short_description": "Once-per-year utility bill credit, plus crisis/disconnection-prevention help, for low-income households — funding-limited, so income eligibility does not guarantee assistance.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "manual" },
+      "categorical_pass": ["CalFresh", "Medi-Cal", "SSI"],
+      "requires_sf_resident": true,
+      "immigration_sensitive": true,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Midpoint of CSD's published heating-benefit range ($94-$1,500); this screener does not model the 60%-state-median-income test or the priority-plan funding limits.",
+      "_source": "CSD 2026 LIHEAP program summary. https://www.csd.ca.gov/Pages/LIHEAP-Income-Eligibility.aspx",
+      "annual_value": 797
+    },
+    "required_documents": [
+      "Government photo ID for head of household",
+      "SSNs for all household members",
+      "Proof of income for past 30 days, or proof of categorical program participation",
+      "PG&E account info"
+    ],
+    "application": {
+      "form_name": "LIHEAP Application (CaliforniaOnline)",
+      "form_url": "https://www.caliheapapply.com/",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "monthly_income_gross": "field_monthly_income",
+        "zip_code": "field_zip_code",
+        "current_programs": "field_existing_benefits"
+      }
+    }
+  },
+  {
+    "program_id": "ca_lifeline",
+    "name": "California LifeLine",
+    "level": "state",
+    "administered_by": "CA Public Utilities Commission",
+    "short_description": "Discounted phone (landline/mobile) service for low-income households, plus a limited Home Broadband Pilot offering up to $30/month off internet.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "fpl_pct", "max_pct": 135 },
+      "categorical_pass": ["Medi-Cal", "CalFresh", "CalWORKs", "SSI"],
+      "requires_sf_resident": false,
+      "immigration_sensitive": false,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Conservative baseline of the standard phone discount only; the Home Broadband Pilot (up to $30/mo) is a limited-status add-on not included here.",
+      "_source": "CPUC California LifeLine eligibility page, 2026-2027 table. https://www.cpuc.ca.gov/consumer-support/financial-assistance-savings-and-discounts/lifeline/california-lifeline-eligibility",
+      "annual_value": 228
+    },
+    "required_documents": [
+      "Proof of income, OR proof of enrollment in a qualifying categorical program"
+    ],
+    "application": {
+      "form_name": "California LifeLine Application",
+      "form_url": "https://www.californialifeline.com",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "annual_income_gross": "field_annual_income",
+        "current_programs": "field_existing_benefits"
+      }
+    }
+  },
+  {
+    "program_id": "sfpuc_cap",
+    "name": "SFPUC Water/Sewer Customer Assistance Program",
+    "level": "sf_local",
+    "administered_by": "San Francisco Public Utilities Commission",
+    "short_description": "25-40% discount on combined water & sewer bills for lower-income households. Important: only individually-metered single-family accounts qualify — most master-metered apartment buildings in SF are not eligible even if the resident's income qualifies.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "ami_pct", "max_pct": 50 },
+      "categorical_pass": ["CalWORKs", "CalFresh", "Medi-Cal"],
+      "requires_sf_resident": true,
+      "immigration_sensitive": true,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Illustrative: 25% (the wider ≤50% AMI tier) off a representative SF combined water/sewer bill. Households at ≤30% AMI get a deeper 40% discount not separately modeled here.",
+      "_source": "SFPUC Customer Assistance Program page. https://www.sfpuc.gov/accounts-services/bill-relief/customer-assistance-program-waterwastewater",
+      "annual_value": 220
+    },
+    "required_documents": [
+      "SFPUC account in applicant's name (individually-metered — not master-metered to the building)",
+      "Proof of residency",
+      "Income documentation, or CalWORKs/CalFresh/Medi-Cal enrollment for a data-match waiver"
+    ],
+    "application": {
+      "form_name": "SFPUC CAP Application",
+      "form_url": "https://forms.office.com/g/Ut4PWU2b1y",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "annual_income_gross": "field_annual_income",
+        "zip_code": "field_zip_code"
+      }
+    }
+  },
+  {
+    "program_id": "sf_erap",
+    "name": "SF Emergency Rental Assistance Program (SF ERAP)",
+    "level": "sf_local",
+    "administered_by": "MOHCD / Dept. of Homelessness and Supportive Housing, funded via Season of Sharing",
+    "short_description": "One-time back-rent, move-in cost, or limited future-rent help for SF renters at risk of eviction or housing loss due to financial hardship. Funding-limited — income eligibility does not guarantee assistance.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "ami_pct", "max_pct": 50 },
+      "categorical_pass": [],
+      "requires_sf_resident": true,
+      "immigration_sensitive": false,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Maximum back-rent assistance (the program's primary use case); move-in assistance (up to $6,000) and future rent are additional, not included here.",
+      "_source": "sf.gov SF ERAP program rules, accessed 2026. https://www.sf.gov/information--sf-erap-program-rules",
+      "annual_value": 7500
+    },
+    "required_documents": [
+      "Photo ID",
+      "Income verification for all adult household members",
+      "Proof of SF residency",
+      "Proof of unpaid rent or move-in cost",
+      "Signed landlord W-9",
+      "Hardship documentation (for back rent)"
+    ],
+    "application": {
+      "form_name": "SF ERAP Online Application",
+      "form_url": "https://sferap.com/",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "monthly_income_gross": "field_monthly_income",
+        "zip_code": "field_zip_code"
+      }
+    }
+  },
+  {
+    "program_id": "dahlia_bmr",
+    "name": "DAHLIA Below Market Rate (BMR) Housing Lottery",
+    "level": "sf_local",
+    "administered_by": "Mayor's Office of Housing and Community Development (MOHCD)",
+    "short_description": "Weekly-rotating lottery for below-market-rate rental and ownership units across SF. Always something new to apply to, but each listing is a low-odds lottery, not a guaranteed unit.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "ami_pct", "max_pct": 120 },
+      "categorical_pass": [],
+      "requires_sf_resident": false,
+      "immigration_sensitive": true,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Illustrative gap between SF's 2026 average market 1BR rent (~$3,600-4,000/mo per Zillow/Zumper) and a representative 80%-AMI BMR-restricted rent computed from the SF AMI table. Highly variable by unit and listing.",
+      "_source": "DAHLIA San Francisco Housing Portal. https://housing.sfgov.org/",
+      "annual_value": 14000
+    },
+    "required_documents": [
+      "DAHLIA account",
+      "Household size and income information",
+      "Asset information",
+      "Documentation requested only if selected in the lottery"
+    ],
+    "application": {
+      "form_name": "DAHLIA San Francisco Housing Portal",
+      "form_url": "https://housing.sfgov.org/",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "annual_income_gross": "field_annual_income",
+        "zip_code": "field_zip_code"
+      }
+    }
+  },
+  {
+    "program_id": "clipper_start",
+    "name": "Clipper START",
+    "level": "regional",
+    "administered_by": "Metropolitan Transportation Commission (MTC), region-wide via Clipper",
+    "short_description": "50% off single-ride transit fares across nearly all Bay Area operators (Muni, BART, Caltrain, SamTrans, and more) for eligible low-income adults 19-64.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "fpl_pct", "max_pct": 200 },
+      "categorical_pass": ["CalFresh", "Medi-Cal"],
+      "requires_sf_resident": false,
+      "immigration_sensitive": false,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Illustrative annual savings for a regular transit rider getting 50% off single-ride fares; actual value scales with ridership.",
+      "_source": "SFMTA Clipper START page; MTC vote making the pilot an ongoing fare product (5/28/2025). https://www.sfmta.com/fares/clipper-start",
+      "annual_value": 500
+    },
+    "required_documents": [
+      "EBT card, Medi-Cal card, or county benefits-eligibility letter, OR most recent federal tax return"
+    ],
+    "application": {
+      "form_name": "Clipper START Application",
+      "form_url": "https://www.clipperstartcard.com/",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "household_size": "field_household_size",
+        "annual_income_gross": "field_annual_income",
+        "current_programs": "field_existing_benefits"
+      }
+    }
+  },
+  {
+    "program_id": "clipper_access_rtc",
+    "name": "Clipper Access (RTC Discount ID Card)",
+    "level": "regional",
+    "administered_by": "Metropolitan Transportation Commission (511.org), fulfilled via Clipper",
+    "short_description": "Discount fare ID primarily for people with disabilities, giving reduced regional transit fares across Bay Area operators — no income test. Note: this screener's senior-or-disabled check is shared with Free Muni and will also pass on age 65+ alone, though the real program is disability-focused; a senior without a qualifying disability should confirm directly. Rebranded from \"RTC Card\" in December 2025.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "none" },
+      "categorical_pass": [],
+      "requires_sf_resident": false,
+      "immigration_sensitive": false,
+      "requires_senior_or_disabled": true
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Illustrative annual value of discounted regional transit fares for a regular rider; varies by operator and usage.",
+      "_source": "511.org Clipper Access (formerly RTC Card) program page, rebranded 12/10/2025. https://511.org/travel/transit/clipper-access",
+      "annual_value": 300
+    },
+    "required_documents": [
+      "DMV disabled parking placard registration, ADA Paratransit eligibility, qualifying VA disability rating, or a Medical Certification form completed by a CA-licensed professional"
+    ],
+    "application": {
+      "form_name": "Clipper Access Eligibility Application",
+      "form_url": "https://511.org/travel/transit/clipper-access",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "has_disability": "field_disability_status",
+        "zip_code": "field_zip_code"
+      }
+    }
+  },
+  {
+    "program_id": "caleitc",
+    "name": "CalEITC (California Earned Income Tax Credit)",
+    "level": "state",
+    "administered_by": "CA Franchise Tax Board",
+    "short_description": "Refundable state tax credit for low-income working individuals and families, claimed on your CA state tax return (not a separate application). Worth up to $302 with no qualifying children, or up to $3,756 with qualifying children — this screener shows a conservative illustrative estimate.",
+    "eligibility": {
+      "income_test": { "basis": "annual_gross", "type": "flat_annual_income_cap", "max_amount": 32900 },
+      "categorical_pass": [],
+      "requires_sf_resident": false,
+      "immigration_sensitive": false,
+      "requires_senior_or_disabled": false
+    },
+    "value_estimate": {
+      "method": "fixed",
+      "_note": "Conservative illustrative figure between the $302 (no qualifying children) and $3,756 (with qualifying children) tax-year-2025 maximums. This screener compares total gross income to the cap as a proxy — CalEITC's real test is on earned income specifically.",
+      "_source": "FTB CalEITC eligibility page, tax year 2025 (filed 2026). https://www.ftb.ca.gov/file/personal/credits/caleitc/eligibility-and-credit-information.html",
+      "annual_value": 900
+    },
+    "required_documents": [
+      "SSN or ITIN for filer, spouse, and qualifying children",
+      "Earned income records (W-2/1099)",
+      "CA state tax return"
+    ],
+    "application": {
+      "form_name": "FTB Form 3514, filed with CA Form 540",
+      "form_url": "https://www.ftb.ca.gov/forms/2025/2025-3514.pdf",
+      "prefill_map": {
+        "display_name": "field_applicant_name",
+        "annual_income_gross": "field_earned_income",
+        "member_ages": "field_qualifying_children"
+      }
+    }
   }
 ]

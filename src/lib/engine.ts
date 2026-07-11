@@ -4,6 +4,7 @@ import programsConfig from "@/config/programs.json";
 import type {
   ClientProfile,
   EligibilityResult,
+  ImmigrationStatus,
   ProgramDefinition,
   ScreeningResult,
 } from "@/lib/types";
@@ -32,8 +33,39 @@ function amiForHouseholdSize(size: number): number {
   return table[String(max)] + amiTable.additional_person_annual * (size - max);
 }
 
-function incomeBasisForHouseholdSize(type: "fpl_pct" | "ami_pct", size: number): number {
-  return type === "fpl_pct" ? fplForHouseholdSize(size) : amiForHouseholdSize(size);
+function dollarTableFor(
+  table: { annual_by_household_size: Record<string, number>; additional_person_annual: number },
+  size: number,
+): number {
+  const max = 8;
+  if (size <= max) return table.annual_by_household_size[String(size)];
+  return table.annual_by_household_size[String(max)] + table.additional_person_annual * (size - max);
+}
+
+// Resolves any of the four percentage/dollar-comparable income test types to
+// a common (basis, maxPct, label) shape so the same borderline-band logic in
+// evaluateProgram can drive all of them. dollar_table and
+// flat_annual_income_cap treat their own ceiling as the "100%" line.
+function incomeBasisFor(
+  program: ProgramDefinition,
+  householdSize: number,
+): { basis: number; maxPct: number; label: string } {
+  const test = program.eligibility.income_test;
+  if (test.type === "fpl_pct") {
+    return { basis: fplForHouseholdSize(householdSize), maxPct: test.max_pct as number, label: "FPL" };
+  }
+  if (test.type === "ami_pct") {
+    return { basis: amiForHouseholdSize(householdSize), maxPct: test.max_pct as number, label: "Bay Area AMI" };
+  }
+  if (test.type === "dollar_table") {
+    return {
+      basis: dollarTableFor(test.dollar_table!, householdSize),
+      maxPct: 100,
+      label: `${program.name}'s income limit`,
+    };
+  }
+  // flat_annual_income_cap
+  return { basis: test.max_amount as number, maxPct: 100, label: `${program.name}'s income limit` };
 }
 
 function annualIncomeOf(profile: ClientProfile): number | null {
@@ -115,15 +147,28 @@ function evaluateProgram(profile: ClientProfile, program: ProgramDefinition): El
       };
     }
   }
+  if (
+    program.eligibility.immigration_required &&
+    !program.eligibility.immigration_required.includes(profile.immigration_status as ImmigrationStatus)
+  ) {
+    return {
+      ...base,
+      status: "likely_ineligible",
+      confidence: 0.85,
+      reason: `${program.name} is restricted to specific immigration statuses that don't include yours (${profile.immigration_status}).`,
+    };
+  }
 
   const householdSize = profile.household_size as number;
   const annualIncome = annualIncomeOf(profile) as number;
-  const incomeBasis = incomeBasisForHouseholdSize(
-    program.eligibility.income_test.type,
-    householdSize,
-  );
-  const pctOfBasis = Math.round((annualIncome / incomeBasis) * 1000) / 10;
-  const basisLabel = program.eligibility.income_test.type === "fpl_pct" ? "FPL" : "Bay Area AMI";
+  const testType = program.eligibility.income_test.type;
+  const hasScalableIncomeTest = testType !== "none" && testType !== "manual";
+  const { pctOfBasis, maxPct, basisLabel } = hasScalableIncomeTest
+    ? (() => {
+        const { basis, maxPct, label } = incomeBasisFor(program, householdSize);
+        return { pctOfBasis: Math.round((annualIncome / basis) * 1000) / 10, maxPct, basisLabel: label };
+      })()
+    : { pctOfBasis: null as number | null, maxPct: null as number | null, basisLabel: "" };
 
   // 3. Categorical pass.
   const categoricalHit = program.eligibility.categorical_pass.find((p) =>
@@ -157,11 +202,30 @@ function evaluateProgram(profile: ClientProfile, program: ProgramDefinition): El
   }
 
   // 5. Income test.
-  const maxPct = program.eligibility.income_test.max_pct;
-  const lowerBand = maxPct - BORDERLINE_BAND_POINTS;
-  const upperBand = maxPct + BORDERLINE_BAND_POINTS;
+  if (testType === "none") {
+    const value = valueEstimateFor(program, householdSize);
+    return {
+      ...base,
+      status: "likely_eligible",
+      confidence: 0.85,
+      reason: `${program.name} has no income test — eligibility here depends only on the other criteria you've confirmed.`,
+      estimated_annual_value: value,
+    };
+  }
+  if (testType === "manual") {
+    return {
+      ...base,
+      status: "needs_review",
+      confidence: 0.4,
+      reason: `${program.name}'s income/asset test is more complex than a simple percentage-of-poverty-line comparison (e.g. countable-income exclusions, asset limits, or funding-limited priority rules) — this screener can't determine eligibility from income alone. You've cleared the other criteria it checks, so it's worth applying directly for a real determination.`,
+      review_triggers: ["income_test_not_modeled"],
+    };
+  }
 
-  if (pctOfBasis >= lowerBand && pctOfBasis <= upperBand) {
+  const lowerBand = (maxPct as number) - BORDERLINE_BAND_POINTS;
+  const upperBand = (maxPct as number) + BORDERLINE_BAND_POINTS;
+
+  if ((pctOfBasis as number) >= lowerBand && (pctOfBasis as number) <= upperBand) {
     return {
       ...base,
       status: "needs_review",
@@ -172,7 +236,7 @@ function evaluateProgram(profile: ClientProfile, program: ProgramDefinition): El
     };
   }
 
-  if (pctOfBasis < maxPct - CLEAR_MARGIN_POINTS || pctOfBasis < lowerBand) {
+  if ((pctOfBasis as number) < (maxPct as number) - CLEAR_MARGIN_POINTS || (pctOfBasis as number) < lowerBand) {
     const value = valueEstimateFor(program, householdSize);
     return {
       ...base,
