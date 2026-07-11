@@ -4,7 +4,8 @@ import { useState } from "react";
 import type { ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { INTAKE_STRINGS, type Lang } from "@/lib/i18n";
-import LinkifiedText from "@/components/LinkifiedText";
+import AgentMarkdown from "@/components/AgentMarkdown";
+import ApplyPanel from "@/components/ApplyPanel";
 import ProgramCard from "@/components/ProgramCard";
 import TraceView from "@/components/TraceView";
 
@@ -44,13 +45,13 @@ export default function ResultsCard({
 }: Props) {
   const [showTrace, setShowTrace] = useState(false);
   const [showSources, setShowSources] = useState(false);
+  const [showIneligible, setShowIneligible] = useState(false);
   const [draft, setDraft] = useState("");
   const [asking, setAsking] = useState(false);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const t = INTAKE_STRINGS[lang];
   const programName = (id: string) => programs.find((p) => p.program_id === id)?.name ?? id;
   const uniqueSources = [...new Map(citations.map((c) => [c.source, c])).values()];
-  const explanationParagraphs = explanation?.split(/\n\n+/).filter(Boolean) ?? [];
 
   async function submitQuestion(text: string) {
     if (!text.trim() || !onAsk || asking) return;
@@ -76,8 +77,14 @@ export default function ResultsCard({
     }
   }
 
+  const shownResults = [
+    ...screening.results.filter((r) => r.status === "likely_eligible"),
+    ...screening.results.filter((r) => r.status === "needs_review"),
+  ];
+  const ineligibleResults = screening.results.filter((r) => r.status === "likely_ineligible");
+
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col gap-4">
       <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 p-6 text-center">
         <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Estimated benefits surfaced</p>
         <p className="mt-1 text-4xl font-bold text-emerald-800">
@@ -97,16 +104,48 @@ export default function ResultsCard({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {screening.results.map((r) => (
-          <ProgramCard
+        {shownResults.map((r, i) => (
+          <div
             key={r.program_id}
-            result={r}
-            programName={programName(r.program_id)}
-            clientId={clientId}
-            onResolve={r.status === "needs_review" ? () => onResolve(r.program_id) : undefined}
-          />
+            className="animate-benefit-pop h-full"
+            style={{ animationDelay: `${100 + i * 120}ms` }}
+          >
+            <ProgramCard
+              result={r}
+              programName={programName(r.program_id)}
+              clientId={clientId}
+              onResolve={r.status === "needs_review" ? () => onResolve(r.program_id) : undefined}
+            />
+          </div>
         ))}
       </div>
+
+      <ApplyPanel clientId={clientId} screening={screening} programs={programs} />
+
+      {ineligibleResults.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowIneligible((v) => !v)}
+            className="text-xs font-medium text-slate-400 hover:text-slate-600"
+          >
+            {showIneligible
+              ? "Hide programs you're likely not eligible for ▲"
+              : `${ineligibleResults.length} program(s) screened likely not eligible — show ▼`}
+          </button>
+          {showIneligible && (
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {ineligibleResults.map((r) => (
+                <ProgramCard
+                  key={r.program_id}
+                  result={r}
+                  programName={programName(r.program_id)}
+                  clientId={clientId}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {!explanation && explanationPending && (
         <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -116,21 +155,9 @@ export default function ResultsCard({
 
       {explanation && (
         <section className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
-              ✓
-            </span>
-            <h3 className="text-sm font-semibold text-slate-900">Quick summary</h3>
-          </div>
-          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-            {explanationParagraphs.map((paragraph, i) => (
-              <p key={i} className="text-sm leading-relaxed text-slate-700">
-                <LinkifiedText
-                  text={paragraph}
-                  linkClassName="text-teal-700 underline underline-offset-2 hover:text-teal-900"
-                />
-              </p>
-            ))}
+          <h3 className="text-sm font-semibold text-slate-900">Quick summary</h3>
+          <div className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-700">
+            <AgentMarkdown>{explanation}</AgentMarkdown>
           </div>
           {uniqueSources.length > 0 && (
             <div className="mt-3 border-t border-slate-100 pt-3">
@@ -154,9 +181,13 @@ export default function ResultsCard({
               )}
             </div>
           )}
-          {mode && mode !== "local_fallback" && (
+          {mode && (
             <p className="mt-3 text-[11px] text-slate-400">
-              {mode === "live_gradient_agent" ? "Powered by Gradient Agent Platform" : "Powered by DigitalOcean Inference"}
+              {mode === "live_gradient_agent"
+                ? "Powered by Gradient Agent Platform"
+                : mode === "live_inference"
+                  ? "Powered by DigitalOcean Inference"
+                  : "Local fallback"}
             </p>
           )}
         </section>
@@ -193,10 +224,7 @@ export default function ResultsCard({
                   </div>
                   <div className="px-3 py-3 text-sm leading-relaxed text-slate-700">
                     {item.answer ? (
-                      <LinkifiedText
-                        text={item.answer}
-                        linkClassName="text-teal-700 underline underline-offset-2 hover:text-teal-900"
-                      />
+                      <AgentMarkdown>{item.answer}</AgentMarkdown>
                     ) : (
                       <span className="inline-flex items-center gap-2 text-slate-400">
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-500" />

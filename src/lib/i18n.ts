@@ -20,7 +20,6 @@ interface IntakeStrings {
   emptySub: string;
   optional: string;
   questionOf: (n: number, total: number) => string;
-  seniorDisabilityPrompt: string;
   veteranPrompt: string;
   prompts: Record<string, string>;
   chips: Record<string, Chip[]>;
@@ -39,6 +38,9 @@ interface IntakeStrings {
   summaryAskHint: string;
   youAsked: string;
   summarySuggestions: string[];
+  resolvingLabel: (programName: string) => string;
+  stopResolving: string;
+  resolvePlaceholder: string;
 }
 
 export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
@@ -48,8 +50,6 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
       "Tell me about your household — or just answer the quick questions below — and I'll surface every SF benefit you likely qualify for, right here.",
     optional: "Optional",
     questionOf: (n, total) => `Question ${n} of ${total}`,
-    seniorDisabilityPrompt:
-      "Is anyone in your household a senior (65+) or living with a disability? Optional — it only affects a few SF programs.",
     veteranPrompt:
       "Are you a veteran or former military? Optional — it can unlock additional benefits.",
     prompts: {
@@ -58,6 +58,7 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
       sf_resident: "Do you live in San Francisco?",
       immigration_status:
         "What's your immigration status (citizen, lawful permanent resident, other, or unknown)?",
+      senior_disability: "Is anyone in your household a senior (65+) or living with a disability?",
     },
     chips: {
       household_size: [
@@ -108,6 +109,9 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
       "What documents do I need?",
       "How does Benefy work?",
     ],
+    resolvingLabel: (programName) => `Resolving: ${programName}`,
+    stopResolving: "Stop",
+    resolvePlaceholder: "Answer here — I'll re-check your eligibility instantly…",
   },
   es: {
     emptyTitle: "¿Cuál es su situación?",
@@ -115,8 +119,6 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
       "Cuénteme sobre su hogar — o simplemente responda las preguntas rápidas de abajo — y le mostraré aquí mismo todos los beneficios de SF a los que probablemente califica.",
     optional: "Opcional",
     questionOf: (n, total) => `Pregunta ${n} de ${total}`,
-    seniorDisabilityPrompt:
-      "¿Alguien en su hogar es adulto mayor (65+) o vive con una discapacidad? Opcional — solo afecta a algunos programas de SF.",
     veteranPrompt:
       "¿Es usted veterano/a o ex militar? Opcional — puede desbloquear beneficios adicionales.",
     prompts: {
@@ -125,6 +127,7 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
       sf_resident: "¿Vive usted en San Francisco?",
       immigration_status:
         "¿Cuál es su estatus migratorio (ciudadanía, residencia permanente, otro, o no está seguro/a)?",
+      senior_disability: "¿Alguien en su hogar es adulto mayor (65+) o vive con una discapacidad?",
     },
     chips: {
       household_size: [
@@ -175,5 +178,8 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
       "¿Qué documentos necesito?",
       "¿Cómo funciona Benefy?",
     ],
+    resolvingLabel: (programName) => `Resolviendo: ${programName}`,
+    stopResolving: "Detener",
+    resolvePlaceholder: "Responda aquí — vuelvo a revisar su elegibilidad al instante…",
   },
 };

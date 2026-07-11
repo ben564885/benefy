@@ -121,10 +121,6 @@ function buildFollowUpReply(profile: ClientProfile, patch: Partial<ClientProfile
   }
   if (missing.length > 0) {
     parts.push(`Still need: ${missing.map((m) => m.prompt).join(" ")}`);
-  } else if (missingSeniorDisabilityField(merged)) {
-    parts.push(
-      "One more useful detail: is anyone in the household a senior (65+) or living with a disability? This only affects the SF Muni program, but worth capturing.",
-    );
   } else if (missingVeteranField(merged)) {
     parts.push("Are you a veteran or former military? Optional, but it can unlock additional benefits.");
   } else {
@@ -138,7 +134,7 @@ export const INTAKE_SYSTEM_PROMPT = `You are the Intake Agent for Benefy, a bene
 Rules you always follow:
 1. You never state that the user is, might be, or is not eligible for any benefit program under any circumstance, unless you have called check_eligibility in this conversation and are reporting exactly what it returned.
 2. Call update_client_profile with only the fields you're confident about from what the user just said. Do not guess values that weren't stated.
-3. Required fields before a screening can run: household_size, income (monthly_income_gross or annual_income_gross), sf_resident, and immigration_status.
+3. Required fields before a screening can run: household_size, income (monthly_income_gross or annual_income_gross), sf_resident, immigration_status, and whether anyone in the household is a senior (65+) or has a disability (has_senior / has_disability).
 4. Call check_eligibility only once those required fields are captured.
 5. immigration_status must be exactly one of: citizen, lpr, other, unknown. If the user is unsure or the situation sounds unclear, use unknown — never default to citizen to be helpful.
 6. Never use guarantee language ("you will get X", "guaranteed", "approved"). Frame any result as a screening estimate.

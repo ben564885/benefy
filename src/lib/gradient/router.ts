@@ -5,11 +5,21 @@
 // the same policy expressed as backend orchestration logic so it works
 // identically in local-fallback mode.
 
-export type AgentTarget = "intake" | "navigator";
+export type AgentTarget = "intake" | "navigator" | "resolve";
+
+const NAVIGATOR_SIGNALS = [
+  /\bwhy\b/,
+  /\bwhat (documents?|paperwork)\b/,
+  /\bhow (do|does|can)\b.*\bapply\b/,
+  /\bexplain\b/,
+  /\bwhat'?s next\b/,
+  /\bwhat does .* mean\b/,
+  /\bneeds? review\b.*\bwhy\b/,
+  /\bwhich programs?\b/,
+];
 
 // After a screening exists, only route back to Intake when the user is
-// clearly correcting or adding profile facts — everything else (questions
-// about results, programs, documents, or how Benefy works) goes to Navigator.
+// clearly correcting or adding profile facts — everything else goes to Navigator.
 const INTAKE_UPDATE_SIGNALS = [
   /\$\d/,
   /\bhousehold of\b/,
@@ -24,12 +34,35 @@ const INTAKE_UPDATE_SIGNALS = [
   /\bsenior\b|\bdisabilit/,
 ];
 
-export function routeTurn(userText: string, hasExistingScreening: boolean): AgentTarget {
+// "Ask me the rest", "resolve the unresolved", "finish the questions" —
+// requests to work through the needs-review items.
+const RESOLVE_SIGNALS = [
+  /\bresolve\b/,
+  /\bunresolved\b/,
+  /\bneeds? review\b/,
+  /\bask me\b.*\bquestions?\b/,
+  /\b(finish|complete|answer)\b.*\b(questions?|screening|review)\b/,
+  /\bremaining (questions?|items?|programs?)\b/,
+  /\bresolver\b/,
+  /\bpendientes?\b/,
+];
+
+export function routeTurn(
+  userText: string,
+  hasExistingScreening: boolean,
+  needsReviewCount = 0,
+): AgentTarget {
+  const lower = userText.toLowerCase();
+  if (hasExistingScreening && needsReviewCount > 0 && RESOLVE_SIGNALS.some((p) => p.test(lower))) {
+    return "resolve";
+  }
+  if (hasExistingScreening && INTAKE_UPDATE_SIGNALS.some((p) => p.test(lower))) {
+    return "intake";
+  }
+  if (hasExistingScreening && NAVIGATOR_SIGNALS.some((p) => p.test(lower))) {
+    return "navigator";
+  }
   if (hasExistingScreening) {
-    const lower = userText.toLowerCase();
-    if (INTAKE_UPDATE_SIGNALS.some((p) => p.test(lower))) {
-      return "intake";
-    }
     return "navigator";
   }
   return "intake";

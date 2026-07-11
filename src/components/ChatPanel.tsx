@@ -2,13 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChatMessage, ClientProfile, ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
-import {
-  CORE_REQUIRED_FIELDS,
-  missingCoreFields,
-  missingSeniorDisabilityField,
-} from "@/lib/gradient/intakeExtractor";
+import { CORE_REQUIRED_FIELDS, missingCoreFields } from "@/lib/gradient/intakeExtractor";
 import { INTAKE_STRINGS, type Lang } from "@/lib/i18n";
-import LinkifiedText from "@/components/LinkifiedText";
+import AgentMarkdown from "@/components/AgentMarkdown";
 import ResultsCard from "@/components/ResultsCard";
 
 export type ThreadItem =
@@ -30,17 +26,17 @@ interface Props {
   programs: ProgramDefinition[];
   lang?: Lang;
   onSend: (message: string, guided?: boolean, display?: string) => Promise<void>;
-  onSkipSenior?: () => void;
   onSkipVeteran?: () => void;
   onResolve: (programId: string) => void;
   onRecheck?: () => void;
   screeningLoading?: boolean;
-  seniorStepDismissed?: boolean;
   veteranStepDismissed?: boolean;
   hasScreening?: boolean;
   onAskQuestion?: (question: string) => Promise<string | null>;
   disabled?: boolean;
   placeholder?: string;
+  resolving?: { programId: string; name: string } | null;
+  onCancelResolve?: () => void;
 }
 
 type ActiveField =
@@ -125,47 +121,57 @@ export default function ChatPanel({
   programs,
   lang = "en",
   onSend,
-  onSkipSenior,
   onSkipVeteran,
   onResolve,
   onRecheck,
   screeningLoading,
-  seniorStepDismissed = false,
   veteranStepDismissed = false,
   hasScreening = false,
   onAskQuestion,
   disabled,
   placeholder,
+  resolving,
+  onCancelResolve,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendingGuided, setSendingGuided] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastItemRef = useRef<HTMLDivElement>(null);
+  const firstScroll = useRef(true);
   const t = INTAKE_STRINGS[lang];
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const last = thread[thread.length - 1];
+    if (last?.kind === "results" && lastItemRef.current) {
+      lastItemRef.current.scrollIntoView({ behavior: firstScroll.current ? "auto" : "smooth", block: "start" });
+    } else {
+      el.scrollTo({ top: el.scrollHeight, behavior: firstScroll.current ? "auto" : "smooth" });
+    }
+    firstScroll.current = false;
   }, [thread.length, sending, screeningLoading]);
 
   const missing = missingCoreFields(profile);
   const coreDone = missing.length === 0;
-  const seniorStepDone = !missingSeniorDisabilityField(profile) || seniorStepDismissed;
-  const showSeniorOptional = coreDone && missingSeniorDisabilityField(profile) && !seniorStepDismissed;
-  const showVeteranOptional = coreDone && seniorStepDone && profile.is_veteran == null && !veteranStepDismissed;
-  const activeField: ActiveField = !coreDone
-    ? (missing[0].key as ActiveField)
-    : showSeniorOptional
-      ? "senior_disability"
+  const showVeteranOptional = coreDone && profile.is_veteran == null && !veteranStepDismissed;
+  const activeField: ActiveField = resolving
+    ? null
+    : !coreDone
+      ? (missing[0].key as ActiveField)
       : showVeteranOptional
         ? "veteran_status"
         : null;
-  const questionNumber = CORE_REQUIRED_FIELDS.length - missing.length + 1;
+  const questionNumber = !coreDone
+    ? CORE_REQUIRED_FIELDS.length - missing.length + 1
+    : CORE_REQUIRED_FIELDS.length + 1;
+  const questionTotal = showVeteranOptional ? CORE_REQUIRED_FIELDS.length + 1 : CORE_REQUIRED_FIELDS.length;
   const questionPrompt = !coreDone
     ? t.prompts[missing[0].key as string]
-    : showSeniorOptional
-      ? t.seniorDisabilityPrompt
-      : t.veteranPrompt;
+    : showVeteranOptional
+      ? t.veteranPrompt
+      : "";
 
   async function submitMessage(text: string, guided = false, display?: string) {
     if (!text.trim() || sending) return;
@@ -186,72 +192,95 @@ export default function ChatPanel({
     await submitMessage(text);
   }
 
+  const composerPlaceholder =
+    placeholder ??
+    (resolving ? t.resolvePlaceholder : hasScreening ? t.summaryAskPlaceholder : t.composerPlaceholder);
+
   return (
-    <div className="flex flex-1 flex-col">
-      <div
-        ref={scrollRef}
-        className={`flex flex-1 flex-col space-y-5 overflow-y-auto py-6 ${
-          thread.length === 0 ? "justify-center" : "justify-end"
-        }`}
-        style={{ minHeight: "24rem" }}
-      >
-        {thread.length === 0 && (
-          <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <h2 className="text-2xl font-semibold text-slate-900">{t.emptyTitle}</h2>
-            <p className="max-w-md text-sm text-slate-500">{t.emptySub}</p>
-          </div>
-        )}
-        {thread.map((item, i) =>
-          item.kind === "message" ? (
-            <div key={i} className={`flex ${item.message.role === "user" ? "justify-end" : "justify-start"}`}>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto py-6">
+        <div
+          className={`flex min-h-full flex-col space-y-5 ${
+            thread.length === 0 ? "justify-center" : "justify-end"
+          }`}
+        >
+          {thread.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-16 text-center">
+              <h2 className="text-2xl font-semibold text-slate-900">{t.emptyTitle}</h2>
+              <p className="max-w-md text-sm text-slate-500">{t.emptySub}</p>
+            </div>
+          )}
+          {thread.map((item, i) => {
+            const isLast = i === thread.length - 1;
+            return item.kind === "message" ? (
               <div
-                className={`max-w-[85%] whitespace-pre-wrap rounded-3xl px-4 py-2.5 text-sm ${
-                  item.message.role === "user" ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-800"
-                }`}
+                key={i}
+                ref={isLast ? lastItemRef : undefined}
+                className={`flex ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {item.message.role === "assistant" ? (
-                  <LinkifiedText
-                    text={item.message.content}
-                    linkClassName="text-teal-800 underline underline-offset-2 hover:text-teal-900"
-                  />
-                ) : (
-                  item.message.content
-                )}
+                <div
+                  className={`max-w-[85%] rounded-3xl px-4 py-2.5 text-sm ${
+                    item.message.role === "user"
+                      ? "whitespace-pre-wrap bg-teal-700 text-white"
+                      : "bg-slate-100 text-slate-800"
+                  }`}
+                >
+                  {item.message.role === "user" ? (
+                    item.message.content
+                  ) : (
+                    <AgentMarkdown>{item.message.content}</AgentMarkdown>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div key={i} ref={isLast ? lastItemRef : undefined}>
+                <ResultsCard
+                  clientId={clientId}
+                  screening={item.screening}
+                  programs={programs}
+                  explanation={item.explanation}
+                  explanationPending={item.explanationPending}
+                  citations={item.citations}
+                  mode={item.mode}
+                  trace={item.trace}
+                  lang={lang}
+                  onAsk={onAskQuestion}
+                  onResolve={onResolve}
+                  onRecheck={onRecheck}
+                />
+              </div>
+            );
+          })}
+          {((sending && !sendingGuided) || screeningLoading) && (
+            <div className="flex justify-start">
+              <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
+                {screeningLoading ? t.checking : t.thinking}
               </div>
             </div>
-          ) : (
-            <ResultsCard
-              key={i}
-              clientId={clientId}
-              screening={item.screening}
-              programs={programs}
-              explanation={item.explanation}
-              explanationPending={item.explanationPending}
-              citations={item.citations}
-              mode={item.mode}
-              trace={item.trace}
-              lang={lang}
-              onAsk={onAskQuestion}
-              onResolve={onResolve}
-              onRecheck={onRecheck}
-            />
-          ),
-        )}
-        {((sending && !sendingGuided) || screeningLoading) && (
-          <div className="flex justify-start">
-            <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
-              {screeningLoading ? t.checking : t.thinking}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <div className="sticky bottom-0 flex flex-col gap-3 pt-4">
+      <div className="flex flex-col gap-3 pt-4">
+        {resolving && (
+          <div className="flex w-fit items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-medium text-amber-800">
+            <span>{t.resolvingLabel(resolving.name)}</span>
+            <button
+              type="button"
+              onClick={onCancelResolve}
+              className="font-semibold text-amber-600 transition hover:text-amber-900"
+              aria-label={t.stopResolving}
+            >
+              {t.stopResolving} ✕
+            </button>
+          </div>
+        )}
         {activeField && (
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-slate-400">
-              {coreDone ? t.optional : t.questionOf(questionNumber, CORE_REQUIRED_FIELDS.length)} ·{" "}
-              {questionPrompt}
+              {activeField === "veteran_status"
+                ? `${t.optional} · ${questionPrompt}`
+                : `${t.questionOf(questionNumber, questionTotal)} · ${questionPrompt}`}
             </span>
             {activeField === "monthly_income_gross" ? (
               <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
@@ -268,11 +297,11 @@ export default function ChatPanel({
                     {chip.label}
                   </button>
                 ))}
-                {(activeField === "senior_disability" || activeField === "veteran_status") && (
+                {activeField === "veteran_status" && (
                   <button
                     type="button"
                     disabled={disabled || sending}
-                    onClick={activeField === "senior_disability" ? onSkipSenior : onSkipVeteran}
+                    onClick={onSkipVeteran}
                     className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t.skipOptionalLabel}
@@ -283,14 +312,15 @@ export default function ChatPanel({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm">
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm"
+        >
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={disabled || sending}
-            placeholder={
-              hasScreening ? t.summaryAskPlaceholder : (placeholder ?? t.composerPlaceholder)
-            }
+            placeholder={composerPlaceholder}
             className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
           />
           <button

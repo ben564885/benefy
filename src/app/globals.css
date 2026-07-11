@@ -41,12 +41,61 @@ body {
   animation: orb-spin 16s linear infinite;
 }
 
+@keyframes benefit-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* backwards fill keeps each card invisible until its stagger delay hits,
+   so the grid reveals one block at a time (delay set inline per card). */
+.animate-benefit-pop {
+  animation: benefit-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee-left {
+  animation: marquee-left 22s linear infinite;
+}
+
+.animate-marquee-right {
+  animation: marquee-right 22s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 
-  .animate-orb-spin {
+  .animate-orb-spin,
+  .animate-marquee-left,
+  .animate-marquee-right {
+    animation: none;
+  }
+
+  .animate-benefit-pop {
     animation: none;
   }
 }

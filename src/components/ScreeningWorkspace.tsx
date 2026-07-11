@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ChatMessage, ClientProfile, ClientRecord, ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import ChatPanel, { type ThreadItem } from "@/components/ChatPanel";
-import { missingSeniorDisabilityField, missingVeteranField } from "@/lib/gradient/intakeExtractor";
+import { missingCoreFields } from "@/lib/gradient/intakeExtractor";
 import RealtimeVoiceIntake from "@/components/RealtimeVoiceIntake";
 import { LANGS, type Lang } from "@/lib/i18n";
 
@@ -13,27 +13,12 @@ interface Props {
   initialChat: ChatMessage[];
   initialTrace: TraceStep[];
   programs: ProgramDefinition[];
+  header?: React.ReactNode;
+  signOut?: React.ReactNode;
 }
 
-function isReadyToScreen(profile: ClientProfile): boolean {
-  return (
-    profile.household_size != null &&
-    (profile.monthly_income_gross != null || profile.annual_income_gross != null) &&
-    profile.sf_resident != null &&
-    profile.immigration_status != null
-  );
-}
-
-function canRunScreen(
-  profile: ClientProfile,
-  seniorStepDismissed: boolean,
-  veteranStepDismissed: boolean,
-): boolean {
-  return (
-    isReadyToScreen(profile) &&
-    (!missingSeniorDisabilityField(profile) || seniorStepDismissed) &&
-    (profile.is_veteran != null || veteranStepDismissed)
-  );
+function canRunScreen(profile: ClientProfile, veteranStepDismissed: boolean): boolean {
+  return missingCoreFields(profile).length === 0 && (profile.is_veteran != null || veteranStepDismissed);
 }
 
 function buildInitialThread(
@@ -55,21 +40,25 @@ function buildInitialThread(
   return items;
 }
 
-export default function ScreeningWorkspace({ clientId, initialRecord, initialChat, initialTrace, programs }: Props) {
+export default function ScreeningWorkspace({
+  clientId,
+  initialRecord,
+  initialChat,
+  initialTrace,
+  programs,
+  header,
+  signOut,
+}: Props) {
   const [profile, setProfile] = useState<ClientProfile>(initialRecord.profile);
   const [thread, setThread] = useState<ThreadItem[]>(() =>
     buildInitialThread(initialChat, initialRecord, initialTrace),
   );
   const [hasScreening, setHasScreening] = useState(initialRecord.last_screening != null);
   const [screeningLoading, setScreeningLoading] = useState(false);
-  const [seniorStepDismissed, setSeniorStepDismissed] = useState(
-    !missingSeniorDisabilityField(initialRecord.profile),
-  );
-  const [veteranStepDismissed, setVeteranStepDismissed] = useState(
-    initialRecord.profile.is_veteran != null,
-  );
+  const [veteranStepDismissed, setVeteranStepDismissed] = useState(initialRecord.profile.is_veteran != null);
   const [intakeMode, setIntakeMode] = useState<"text" | "voice">("text");
   const [lang, setLang] = useState<Lang>("en");
+  const [resolving, setResolving] = useState<{ programId: string; name: string } | null>(null);
 
   async function refreshRecord() {
     const res = await fetch(`/api/clients/${clientId}`);
@@ -78,9 +67,6 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     setProfile(data.client.profile);
   }
 
-  // Fetches the Navigator explanation after the engine result is already on
-  // screen, and patches it into the newest results item. Fire-and-forget —
-  // the dollar reveal never waits on a language model.
   function fillInExplanation() {
     fetch(`/api/clients/${clientId}/explain`, { method: "POST" })
       .then(async (res) => {
@@ -138,6 +124,20 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     }
   }
 
+  function patchLatestResults(screening: ScreeningResult, trace: TraceStep[]) {
+    setThread((prev) => {
+      const next = [...prev];
+      for (let i = next.length - 1; i >= 0; i--) {
+        const item = next[i];
+        if (item.kind === "results") {
+          next[i] = { ...item, screening, trace };
+          break;
+        }
+      }
+      return next;
+    });
+  }
+
   async function handleAskQuestion(question: string): Promise<string | null> {
     const res = await fetch(`/api/clients/${clientId}/intake`, {
       method: "POST",
@@ -146,27 +146,10 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     const data = await res.json();
     if (!res.ok) return "Sorry, I couldn't answer that right now. Please try again.";
 
-    const reply =
+    return (
       data.assistant_reply?.trim() ||
-      "I couldn't generate an answer. Try asking about a specific program, or click \"What does this mean?\"";
-
-    setThread((prev) => [
-      ...prev,
-      {
-        kind: "message",
-        message: { role: "user", content: question, timestamp: new Date().toISOString() },
-      },
-      {
-        kind: "message" as const,
-        message: {
-          role: "assistant" as const,
-          content: reply,
-          timestamp: new Date().toISOString(),
-        },
-      },
-    ]);
-
-    return reply;
+      "I couldn't generate an answer. Try asking about a specific program, or click \"What does this mean?\""
+    );
   }
 
   async function handleSend(message: string, guided?: boolean, display?: string) {
@@ -177,6 +160,30 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
         message: { role: "user", content: display ?? message, timestamp: new Date().toISOString() },
       },
     ]);
+
+    if (resolving) {
+      const res = await fetch(`/api/clients/${clientId}/resolve`, {
+        method: "POST",
+        body: JSON.stringify({ program_id: resolving.programId, message, lang }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      if (data.assistant_reply) {
+        setThread((prev) => [
+          ...prev,
+          {
+            kind: "message",
+            message: { role: "assistant", content: data.assistant_reply, timestamp: new Date().toISOString() },
+          },
+        ]);
+      }
+      if (data.profile) setProfile(data.profile);
+      if (data.screening) patchLatestResults(data.screening, data.trace ?? []);
+      const nextId: string | null = data.resolving_program_id ?? null;
+      const nextProgram = nextId ? programs.find((p) => p.program_id === nextId) : undefined;
+      setResolving(nextProgram ? { programId: nextProgram.program_id, name: nextProgram.name } : null);
+      return;
+    }
 
     const res = await fetch(`/api/clients/${clientId}/intake`, {
       method: "POST",
@@ -193,32 +200,21 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
           message: { role: "assistant", content: data.assistant_reply, timestamp: new Date().toISOString() },
         },
       ]);
-    } else if (hasScreening && data.target === "navigator") {
-      setThread((prev) => [
-        ...prev,
-        {
-          kind: "message",
-          message: {
-            role: "assistant",
-            content: "I couldn't generate an answer. Try asking about a specific program by name.",
-            timestamp: new Date().toISOString(),
-          },
-        },
-      ]);
     }
 
     const updatedProfile: ClientProfile = data.profile ?? profile;
     if (data.profile) setProfile(data.profile);
-    if (!missingSeniorDisabilityField(updatedProfile)) {
-      setSeniorStepDismissed(true);
-    }
     if (updatedProfile.is_veteran != null) {
       setVeteranStepDismissed(true);
     }
 
+    if (data.resolve_target?.program_id) {
+      const program = programs.find((p) => p.program_id === data.resolve_target.program_id);
+      if (program) setResolving({ programId: program.program_id, name: program.name });
+    }
+
     const readyToScreen = canRunScreen(
       updatedProfile,
-      seniorStepDismissed || !missingSeniorDisabilityField(updatedProfile),
       veteranStepDismissed || updatedProfile.is_veteran != null,
     );
     if (!hasScreening && readyToScreen) {
@@ -228,69 +224,71 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     }
   }
 
-  async function handleSkipSenior() {
-    setSeniorStepDismissed(true);
-    if (!hasScreening && canRunScreen(profile, true, veteranStepDismissed)) {
-      await runScreen();
-    }
-  }
-
   async function handleSkipVeteran() {
     setVeteranStepDismissed(true);
-    if (!hasScreening && canRunScreen(profile, seniorStepDismissed, true)) {
+    if (!hasScreening && canRunScreen(profile, true)) {
       await runScreen();
     }
   }
 
-  function handleResolve(programId: string) {
+  async function handleResolve(programId: string) {
     const program = programs.find((p) => p.program_id === programId);
     if (!program) return;
-    setThread((prev) => [
-      ...prev,
-      {
-        kind: "message",
-        message: {
-          role: "assistant",
-          content: `Let's resolve ${program.name}. What can you tell me?`,
-          timestamp: new Date().toISOString(),
+    const res = await fetch(`/api/clients/${clientId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ program_id: programId, lang }),
+    });
+    const data = await res.json();
+    if (!res.ok) return;
+    if (data.assistant_reply) {
+      setThread((prev) => [
+        ...prev,
+        {
+          kind: "message",
+          message: { role: "assistant", content: data.assistant_reply, timestamp: new Date().toISOString() },
         },
-      },
-    ]);
+      ]);
+    }
+    setResolving(data.resolvable ? { programId, name: program.name } : null);
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 self-end">
-        <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
-          {LANGS.map((l) => (
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        {header}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setLang(l.code)}
+                className={`rounded-full px-3 py-1 font-medium transition ${
+                  lang === l.code ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
             <button
-              key={l.code}
-              onClick={() => setLang(l.code)}
+              onClick={() => setIntakeMode("text")}
               className={`rounded-full px-3 py-1 font-medium transition ${
-                lang === l.code ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                intakeMode === "text" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {l.label}
+              Text
             </button>
-          ))}
-        </div>
-        <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
-        <button
-          onClick={() => setIntakeMode("text")}
-          className={`rounded-full px-3 py-1 font-medium transition ${
-            intakeMode === "text" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Text
-        </button>
-        <button
-          onClick={() => setIntakeMode("voice")}
-          className={`rounded-full px-3 py-1 font-medium transition ${
-            intakeMode === "voice" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Voice (beta)
-        </button>
+            <button
+              onClick={() => setIntakeMode("voice")}
+              className={`rounded-full px-3 py-1 font-medium transition ${
+                intakeMode === "voice" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Voice (beta)
+            </button>
+          </div>
+          {signOut}
         </div>
       </div>
 
@@ -302,15 +300,15 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
           programs={programs}
           lang={lang}
           onSend={handleSend}
-          onSkipSenior={handleSkipSenior}
           onSkipVeteran={handleSkipVeteran}
           onResolve={handleResolve}
           onRecheck={runScreen}
           screeningLoading={screeningLoading}
-          seniorStepDismissed={seniorStepDismissed}
           veteranStepDismissed={veteranStepDismissed}
           hasScreening={hasScreening}
           onAskQuestion={handleAskQuestion}
+          resolving={resolving}
+          onCancelResolve={() => setResolving(null)}
         />
       ) : (
         <RealtimeVoiceIntake clientId={clientId} lang={lang} onProfileUpdated={refreshRecord} />

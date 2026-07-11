@@ -61,6 +61,9 @@ your free text / quick-reply chips / voice
   (see "Data sources"). Swapping next year's numbers means editing JSON, not logic.
 - **`src/lib/gradient/`** — the DigitalOcean AI integration layer: agent orchestration
   (`intakeAgent.ts`, `navigatorAgent.ts`), multi-agent routing (`router.ts`), the
+  needs-review resolution loop (`resolutionAgent.ts` — turns each amber card's engine-reported
+  `review_triggers`/`missing_fields` into one targeted question, extracts the answer, re-runs the
+  engine, and reports the before/after delta deterministically), the
   `check_eligibility` / `update_client_profile` function-tool definitions (`tools.ts`), code-level
   guardrails that strip guarantee language from any agent output (`guardrails.ts`), and an eval
   harness asserting the Navigator never claims more than the engine returned (`evals.ts`).
@@ -69,10 +72,13 @@ your free text / quick-reply chips / voice
   Agent Platform agents invoke; they call back into `/api/functions/*` (authenticated by a shared
   secret, `src/lib/functionAuth.ts`) so the *deployed* engine is still the single source of truth.
 - **`src/app/api/`** — Next.js route handlers: client CRUD, `intake` (chat turn → router → agent),
-  `screen` (tool call + trace record), `application/[programId]` (pre-fill), realtime voice session.
+  `screen` (tool call + trace record), `resolve` (needs-review resolution loop: answer → re-screen
+  → delta), `application/[programId]` (pre-fill), realtime voice session.
 - **`src/app/clients/[id]`** — the screening workspace: guided chat with quick-reply chips
   (**English/Spanish toggle**), free-text intake, voice intake, results with dollar
-  reveal, program cards, "View reasoning" trace, pre-filled application view.
+  reveal, program cards with a live "Resolve →" loop on every needs-review item (each answer
+  re-runs the engine and the dollar total updates in place), "View reasoning" trace, pre-filled
+  application view.
 
 ### Three backends, tried in order (what's live, honestly)
 
