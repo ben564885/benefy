@@ -34,6 +34,8 @@ interface Props {
   screeningLoading?: boolean;
   disabled?: boolean;
   placeholder?: string;
+  resolving?: { programId: string; name: string } | null;
+  onCancelResolve?: () => void;
 }
 
 type ActiveField =
@@ -122,6 +124,8 @@ export default function ChatPanel({
   screeningLoading,
   disabled,
   placeholder,
+  resolving,
+  onCancelResolve,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -137,11 +141,15 @@ export default function ChatPanel({
   const missing = missingCoreFields(profile);
   const coreDone = missing.length === 0;
   const showOptional = coreDone && missingSeniorDisabilityField(profile);
-  const activeField: ActiveField = !coreDone
-    ? (missing[0].key as ActiveField)
-    : showOptional
-      ? "senior_disability"
-      : null;
+  // While resolving a specific program, the targeted question owns the
+  // conversation — hide the generic guided chips so answers go to /resolve.
+  const activeField: ActiveField = resolving
+    ? null
+    : !coreDone
+      ? (missing[0].key as ActiveField)
+      : showOptional
+        ? "senior_disability"
+        : null;
   const questionNumber = CORE_REQUIRED_FIELDS.length - missing.length + 1;
   const questionPrompt = !coreDone ? t.prompts[missing[0].key as string] : t.seniorDisabilityPrompt;
 
@@ -216,6 +224,19 @@ export default function ChatPanel({
       </div>
 
       <div className="sticky bottom-0 flex flex-col gap-3 pt-4">
+        {resolving && (
+          <div className="flex w-fit items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-medium text-amber-800">
+            <span>{t.resolvingLabel(resolving.name)}</span>
+            <button
+              type="button"
+              onClick={onCancelResolve}
+              className="font-semibold text-amber-600 transition hover:text-amber-900"
+              aria-label={t.stopResolving}
+            >
+              {t.stopResolving} ✕
+            </button>
+          </div>
+        )}
         {activeField && (
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-slate-400">
@@ -247,7 +268,7 @@ export default function ChatPanel({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={disabled || sending}
-            placeholder={placeholder ?? t.composerPlaceholder}
+            placeholder={placeholder ?? (resolving ? t.resolvePlaceholder : t.composerPlaceholder)}
             className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
           />
           <button

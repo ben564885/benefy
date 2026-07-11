@@ -31,6 +31,9 @@ interface IntakeStrings {
   send: string;
   thinking: string;
   checking: string;
+  resolvingLabel: (programName: string) => string;
+  stopResolving: string;
+  resolvePlaceholder: string;
 }
 
 export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
@@ -82,6 +85,9 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
     send: "Send",
     thinking: "Thinking…",
     checking: "Checking what you qualify for…",
+    resolvingLabel: (programName) => `Resolving: ${programName}`,
+    stopResolving: "Stop",
+    resolvePlaceholder: "Answer here — I'll re-check your eligibility instantly…",
   },
   es: {
     emptyTitle: "¿Cuál es su situación?",
@@ -131,5 +137,8 @@ export const INTAKE_STRINGS: Record<Lang, IntakeStrings> = {
     send: "Enviar",
     thinking: "Pensando…",
     checking: "Revisando a qué califica…",
+    resolvingLabel: (programName) => `Resolviendo: ${programName}`,
+    stopResolving: "Detener",
+    resolvePlaceholder: "Responda aquí — vuelvo a revisar su elegibilidad al instante…",
   },
 };

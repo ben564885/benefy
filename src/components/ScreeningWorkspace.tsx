@@ -51,6 +51,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
   const [screeningLoading, setScreeningLoading] = useState(false);
   const [intakeMode, setIntakeMode] = useState<"text" | "voice">("text");
   const [lang, setLang] = useState<Lang>("en");
+  const [resolving, setResolving] = useState<{ programId: string; name: string } | null>(null);
 
   async function refreshRecord() {
     const res = await fetch(`/api/clients/${clientId}`);
@@ -119,6 +120,23 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     }
   }
 
+  // Replaces the newest results card's screening in place so the dollar
+  // total ticks up (and amber cards flip) as resolution answers land,
+  // instead of stacking a second full results card in the thread.
+  function patchLatestResults(screening: ScreeningResult, trace: TraceStep[]) {
+    setThread((prev) => {
+      const next = [...prev];
+      for (let i = next.length - 1; i >= 0; i--) {
+        const item = next[i];
+        if (item.kind === "results") {
+          next[i] = { ...item, screening, trace };
+          break;
+        }
+      }
+      return next;
+    });
+  }
+
   async function handleSend(message: string, guided?: boolean, display?: string) {
     setThread((prev) => [
       ...prev,
@@ -127,6 +145,28 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
         message: { role: "user", content: display ?? message, timestamp: new Date().toISOString() },
       },
     ]);
+
+    if (resolving) {
+      const res = await fetch(`/api/clients/${clientId}/resolve`, {
+        method: "POST",
+        body: JSON.stringify({ program_id: resolving.programId, message, lang }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      if (data.assistant_reply) {
+        setThread((prev) => [
+          ...prev,
+          {
+            kind: "message",
+            message: { role: "assistant", content: data.assistant_reply, timestamp: new Date().toISOString() },
+          },
+        ]);
+      }
+      if (data.profile) setProfile(data.profile);
+      if (data.screening) patchLatestResults(data.screening, data.trace ?? []);
+      if (!data.continue_resolving) setResolving(null);
+      return;
+    }
 
     const res = await fetch(`/api/clients/${clientId}/intake`, {
       method: "POST",
@@ -153,20 +193,25 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     }
   }
 
-  function handleResolve(programId: string) {
+  async function handleResolve(programId: string) {
     const program = programs.find((p) => p.program_id === programId);
     if (!program) return;
-    setThread((prev) => [
-      ...prev,
-      {
-        kind: "message",
-        message: {
-          role: "assistant",
-          content: `Let's resolve ${program.name}. What can you tell me?`,
-          timestamp: new Date().toISOString(),
+    const res = await fetch(`/api/clients/${clientId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ program_id: programId, lang }),
+    });
+    const data = await res.json();
+    if (!res.ok) return;
+    if (data.assistant_reply) {
+      setThread((prev) => [
+        ...prev,
+        {
+          kind: "message",
+          message: { role: "assistant", content: data.assistant_reply, timestamp: new Date().toISOString() },
         },
-      },
-    ]);
+      ]);
+    }
+    setResolving(data.resolvable ? { programId, name: program.name } : null);
   }
 
   return (
@@ -216,6 +261,8 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
           onResolve={handleResolve}
           onRecheck={runScreen}
           screeningLoading={screeningLoading}
+          resolving={resolving}
+          onCancelResolve={() => setResolving(null)}
         />
       ) : (
         <RealtimeVoiceIntake clientId={clientId} lang={lang} onProfileUpdated={refreshRecord} />
