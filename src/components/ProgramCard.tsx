@@ -52,6 +52,7 @@ export default function ProgramCard({ result, programName, clientId }: Props) {
   const [applyOpen, setApplyOpen] = useState(false);
   const [prefill, setPrefill] = useState<PrefillData | null>(null);
   const [loadingPrefill, setLoadingPrefill] = useState(false);
+  const [prefillError, setPrefillError] = useState<string | null>(null);
 
   async function toggleApply() {
     if (applyOpen) {
@@ -61,10 +62,14 @@ export default function ProgramCard({ result, programName, clientId }: Props) {
     setApplyOpen(true);
     if (prefill) return;
     setLoadingPrefill(true);
+    setPrefillError(null);
     try {
       const res = await fetch(`/api/clients/${clientId}/application/${result.program_id}`);
       const data = await res.json();
       if (res.ok) setPrefill(data);
+      else setPrefillError(data.error ?? "Couldn't load this application — try again.");
+    } catch {
+      setPrefillError("Couldn't load this application — try again.");
     } finally {
       setLoadingPrefill(false);
     }
@@ -82,26 +87,31 @@ export default function ProgramCard({ result, programName, clientId }: Props) {
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button
-          onClick={toggleApply}
-          className="rounded-lg border border-slate-300 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-teal-400 hover:text-teal-800"
-        >
-          {applyOpen ? "Hide application" : "See application details"}
-        </button>
-      </div>
+      {result.status !== "likely_ineligible" && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            onClick={toggleApply}
+            className="rounded-lg border border-slate-300 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-teal-400 hover:text-teal-800"
+          >
+            {applyOpen ? "Hide application" : "See application details"}
+          </button>
+        </div>
+      )}
 
       {applyOpen && (
         <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
           {loadingPrefill && <p className="text-xs text-slate-400">Loading your pre-filled application…</p>}
+          {prefillError && <p className="text-xs text-red-700">{prefillError}</p>}
           {prefill && (
             <>
               <p className="text-xs font-semibold text-slate-900">{prefill.form_name} — pre-filled draft</p>
               <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {prefill.fields.map((f) => (
-                  <div key={f.form_field} className="rounded-md bg-slate-50 p-2">
-                    <dt className="text-[11px] uppercase tracking-wide text-slate-400">{f.form_field}</dt>
-                    <dd className="mt-0.5 text-xs font-medium text-slate-900">
+                  <div key={f.form_field} className="min-w-0 rounded-md bg-slate-50 p-2">
+                    <dt className="break-words text-[11px] uppercase tracking-wide text-slate-400">
+                      {f.form_field}
+                    </dt>
+                    <dd className="mt-0.5 break-words text-xs font-medium text-slate-900">
                       {f.value || <span className="text-slate-400">—</span>}
                     </dd>
                   </div>
