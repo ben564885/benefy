@@ -58,40 +58,12 @@ body {
   animation: benefit-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
-@keyframes marquee-left {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes marquee-right {
-  from {
-    transform: translateX(-50%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-.animate-marquee-left {
-  animation: marquee-left 22s linear infinite;
-}
-
-.animate-marquee-right {
-  animation: marquee-right 22s linear infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 
-  .animate-orb-spin,
-  .animate-marquee-left,
-  .animate-marquee-right {
+  .animate-orb-spin {
     animation: none;
   }
 

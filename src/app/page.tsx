@@ -3,6 +3,7 @@ import Link from "next/link";
 import ProgramLogos from "@/components/landing/ProgramLogos";
 import AnimatedStat from "@/components/landing/AnimatedStat";
 import HowItWorksSteps from "@/components/landing/HowItWorksSteps";
+import TypewriterHeadline from "@/components/landing/TypewriterHeadline";
 import StartScreeningButton from "@/components/StartScreeningButton";
 
 const STEPS = [
@@ -40,13 +41,13 @@ export default function HomePage() {
         playsInline
         className="fixed inset-0 -z-20 h-full w-full object-cover"
       >
-        <source src="/bggg.mp4" type="video/mp4" />
+        <source src="/bgggg.mp4" type="video/mp4" />
       </video>
-      <div className="fixed inset-0 -z-10 bg-black/55" />
+      <div className="fixed inset-0 -z-10 bg-black/65" />
       <div
         className="fixed inset-0 -z-10"
         style={{
-          background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.4) 100%)",
+          background: "radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.6) 100%)",
         }}
       />
 
@@ -77,9 +78,10 @@ export default function HomePage() {
               Built for San Francisco residents
             </p>
 
-            <h1 className="text-5xl font-bold tracking-tight text-white sm:text-6xl">
-              Find every dollar you qualify for.
-            </h1>
+            <TypewriterHeadline
+              text="Find every dollar you qualify for."
+              className="text-5xl font-bold tracking-tight text-white sm:text-6xl"
+            />
 
             <p className="mt-6 max-w-md text-base font-bold text-white sm:text-lg">
               Tell us about your household in plain English. Benefy&apos;s intake agent builds

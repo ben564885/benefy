@@ -191,6 +191,22 @@ export async function runIntakeTurn(
             return { ok: true, profile: updated?.profile };
           },
           check_eligibility: async () => {
+            const current = (await getClient(clientId))?.profile;
+            if (!current) return { error: "client not found" };
+            const missing = missingCoreFields(current);
+            if (missing.length > 0) {
+              trace.push({
+                step: "tool_call_check_eligibility_blocked",
+                actor: "function",
+                detail: `Model called check_eligibility before all required fields were captured. Missing: ${missing.map((m) => m.key).join(", ")}.`,
+                timestamp: new Date().toISOString(),
+              });
+              return {
+                error: "missing_required_fields",
+                missing_fields: missing.map((m) => m.key),
+                message: `Cannot screen yet — still need: ${missing.map((m) => m.prompt).join(" ")}`,
+              };
+            }
             const updated = await screenAndStore(clientId);
             if (!updated || !updated.last_screening) return { error: "client not found" };
             trace.push({

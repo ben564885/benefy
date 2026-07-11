@@ -5,6 +5,7 @@ import type { ChatMessage, ClientProfile, ClientRecord, ProgramDefinition, Scree
 import ChatPanel, { type ThreadItem } from "@/components/ChatPanel";
 import RealtimeVoiceIntake from "@/components/RealtimeVoiceIntake";
 import { LANGS, type Lang } from "@/lib/i18n";
+import { missingCoreFields } from "@/lib/gradient/intakeExtractor";
 
 interface Props {
   clientId: string;
@@ -20,12 +21,7 @@ interface Props {
 }
 
 function isReadyToScreen(profile: ClientProfile): boolean {
-  return (
-    profile.household_size != null &&
-    (profile.monthly_income_gross != null || profile.annual_income_gross != null) &&
-    profile.sf_resident != null &&
-    profile.immigration_status != null
-  );
+  return missingCoreFields(profile).length === 0;
 }
 
 function buildInitialThread(
