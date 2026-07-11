@@ -211,7 +211,7 @@ export default function ChatPanel({
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto py-6">
         <div
           className={`flex min-h-full flex-col space-y-5 ${
-            thread.length === 0 ? "justify-center" : "justify-end"
+            thread.length === 0 ? "justify-center" : "justify-start"
           }`}
         >
           {thread.length === 0 && (
@@ -229,7 +229,7 @@ export default function ChatPanel({
                 className={`flex px-6 ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-2xl rounded-3xl px-4 py-2.5 text-sm ${
+                  className={`max-w-3xl rounded-3xl px-6 py-4 text-lg leading-relaxed ${
                     item.message.role === "user"
                       ? "whitespace-pre-wrap bg-teal-700 text-white"
                       : "bg-slate-100 text-slate-800"
@@ -267,7 +267,7 @@ export default function ChatPanel({
           })}
           {((sending && !sendingGuided) || screeningLoading) && (
             <div className="flex justify-start px-6">
-              <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
+              <div className="rounded-3xl bg-slate-100 px-6 py-4 text-lg leading-relaxed text-slate-400">
                 {screeningLoading ? t.checking : t.thinking}
               </div>
             </div>
@@ -287,7 +287,7 @@ export default function ChatPanel({
                       type="button"
                       disabled={disabled || sending}
                       onClick={() => submitMessage(chip.value, true, chip.label)}
-                      className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-base font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {chip.label}
                     </button>
@@ -297,7 +297,7 @@ export default function ChatPanel({
                       type="button"
                       disabled={disabled || sending}
                       onClick={onSkipVeteran}
-                      className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-full border border-transparent px-5 py-2.5 text-base font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {t.skipOptionalLabel}
                     </button>
