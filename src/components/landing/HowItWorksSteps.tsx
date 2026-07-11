@@ -2,82 +2,291 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const ICONS = [
-  // chat bubble
-  <path key="chat" strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8-1.06 0-2.077-.163-3.02-.463L3 21l1.516-4.05C3.546 15.607 3 13.86 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z" />,
-  // sparkles
-  <path key="sparkle" strokeLinecap="round" strokeLinejoin="round" d="M9.5 3v3m0 12v3m-6-9h3m12 0h3M4.93 4.93l2.12 2.12m9.9 9.9 2.12 2.12m0-14.14-2.12 2.12m-9.9 9.9-2.12 2.12M14.5 9.5 12 15l-2.5-5.5L15 12l-5.5-2.5Z" />,
-  // shield check
-  <path key="shield" strokeLinecap="round" strokeLinejoin="round" d="M12 3 4.5 6v6c0 4.5 3 7.5 7.5 9 4.5-1.5 7.5-4.5 7.5-9V6L12 3Zm-2.5 9 1.8 1.8L15 10" />,
-  // dollar sign
-  <path key="dollar" strokeLinecap="round" strokeLinejoin="round" d="M12 3v18m4-14.5c0-1.657-1.79-3-4-3s-4 1.343-4 3 1.79 3 4 3 4 1.343 4 3-1.79 3-4 3-4-1.343-4-3" />,
+// Normalized node positions within the flight stage (0–1 of stage w/h).
+// A gentle zigzag gives the plane an interesting path to bank along.
+const POINTS = [
+  { fx: 0.1, fy: 0.32 },
+  { fx: 0.37, fy: 0.66 },
+  { fx: 0.63, fy: 0.32 },
+  { fx: 0.9, fy: 0.66 },
 ];
+
+// Smooth Catmull-Rom spline through the points, emitted as cubic beziers.
+function buildPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return "";
+  const p = [pts[0], ...pts, pts[pts.length - 1]];
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < p.length - 2; i++) {
+    const p0 = p[i - 1];
+    const p1 = p[i];
+    const p2 = p[i + 1];
+    const p3 = p[i + 2];
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
 
 export default function HowItWorksSteps({
   steps,
 }: {
   steps: { title: string; body: string }[];
 }) {
-  const [visible, setVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const trailRef = useRef<SVGPathElement>(null);
+  const maskRef = useRef<SVGPathElement>(null);
+  const planeRef = useRef<SVGGElement>(null);
 
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+  const [pathD, setPathD] = useState("");
+  const [litCount, setLitCount] = useState(1);
+  const [reduced, setReduced] = useState(false);
+
+  const lenRef = useRef(0);
+  const thresholdsRef = useRef<number[]>([]);
+  const litRef = useRef(1);
+
+  // Respect reduced-motion: fall back to a plain static grid, no pinning.
   useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setReduced(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
+  // Measure the stage so SVG coords == pixel coords (viewBox matches size).
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const measure = () => {
+      const r = stage.getBoundingClientRect();
+      setDims({ w: r.width, h: r.height });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(stage);
+    return () => ro.disconnect();
+  }, [reduced]);
+
+  useEffect(() => {
+    if (!dims.w || !dims.h) return;
+    const pts = POINTS.map((p) => ({ x: p.fx * dims.w, y: p.fy * dims.h }));
+    setPathD(buildPath(pts));
+  }, [dims]);
+
+  // Once the path exists, measure its length and find where each node sits
+  // along it (as a 0–1 fraction) so we know when to light each one.
+  useEffect(() => {
+    const path = trailRef.current;
+    if (!path || !pathD) return;
+    const len = path.getTotalLength();
+    lenRef.current = len;
+
+    const pts = POINTS.map((p) => ({ x: p.fx * dims.w, y: p.fy * dims.h }));
+    thresholdsRef.current = pts.map((pt) => {
+      let best = 0;
+      let bestDist = Infinity;
+      const samples = 300;
+      for (let i = 0; i <= samples; i++) {
+        const l = (i / samples) * len;
+        const q = path.getPointAtLength(l);
+        const dist = (q.x - pt.x) ** 2 + (q.y - pt.y) ** 2;
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = l / len;
+        }
+      }
+      return best;
+    });
+
+    if (maskRef.current) {
+      maskRef.current.style.strokeDasharray = String(len);
+      maskRef.current.style.strokeDashoffset = String(len);
+    }
+    update();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathD, dims]);
+
+  function update() {
+    const wrap = wrapperRef.current;
+    const path = trailRef.current;
+    if (!wrap || !path || !pathD) return;
+
+    // getPointAtLength throws on an empty path — bail until it has geometry.
+    let len = lenRef.current;
+    if (!len) {
+      len = path.getTotalLength();
+      lenRef.current = len;
+    }
+    if (!len) return;
+
+    const scrollable = wrap.offsetHeight - window.innerHeight;
+    const rect = wrap.getBoundingClientRect();
+    const progress = scrollable > 0 ? Math.min(Math.max(-rect.top / scrollable, 0), 1) : 0;
+
+    // Grow the revealed portion of the dotted trail up to the plane.
+    if (maskRef.current) {
+      maskRef.current.style.strokeDashoffset = String(len * (1 - progress));
+    }
+
+    // Move + bank the plane along the path.
+    const l = progress * len;
+    const a = path.getPointAtLength(l);
+    const b = path.getPointAtLength(Math.min(l + 1, len));
+    const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+    if (planeRef.current) {
+      planeRef.current.setAttribute("transform", `translate(${a.x} ${a.y}) rotate(${angle})`);
+    }
+
+    // Light each node once the plane has reached it.
+    const th = thresholdsRef.current;
+    let count = 0;
+    for (let i = 0; i < th.length; i++) {
+      if (progress >= th[i] - 0.001) count++;
+    }
+    if (count !== litRef.current) {
+      litRef.current = count;
+      setLitCount(count);
+    }
+  }
+
+  useEffect(() => {
+    if (reduced) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        update();
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    update();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduced, pathD, dims]);
+
+  if (reduced) {
+    return (
+      <div className="mx-auto max-w-4xl px-6 py-24">
+        <div className="mx-auto mb-12 max-w-2xl text-center">
+          <p className="text-sm font-bold uppercase tracking-wide text-white">How it works</p>
+          <h2 className="mt-2 text-3xl font-bold text-white sm:text-4xl">From a sentence to a screened case</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {steps.map((step) => (
+            <div key={step.title} className="rounded-xl border border-white/20 bg-white/5 p-6 text-base font-bold text-white">
+              {step.title}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div ref={ref} className="relative mx-auto mt-16 max-w-2xl">
-      <div
-        className="absolute left-8 top-8 bottom-8 w-px bg-gradient-to-b from-transparent via-white/30 to-transparent"
-        aria-hidden
-      />
+    <div ref={wrapperRef} className="relative h-[320vh]">
+      <div className="sticky top-0 flex h-screen flex-col items-center justify-center px-6">
+        <div className="mb-8 max-w-2xl text-center">
+          <p className="text-sm font-bold uppercase tracking-wide text-white">How it works</p>
+          <h2 className="mt-2 text-3xl font-bold text-white sm:text-4xl">From a sentence to a screened case</h2>
+        </div>
 
-      <div className="flex flex-col gap-10">
-        {steps.map((step, i) => (
-          <div
-            key={step.title}
-            className="group relative flex items-start gap-6 transition-all duration-700 ease-out"
-            style={{
-              transitionDelay: `${i * 120}ms`,
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateX(0)" : "translateX(-24px)",
-            }}
-          >
-            <div className="relative z-10 flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/25 bg-white/10 shadow-lg backdrop-blur-sm transition-transform duration-300 group-hover:-translate-y-1 group-hover:border-teal-300/60">
-              <svg
-                viewBox="0 0 24 24"
+        <div ref={stageRef} className="relative h-[60vh] w-full max-w-4xl">
+          {dims.w > 0 && (
+            <svg
+              className="absolute inset-0 h-full w-full overflow-visible"
+              viewBox={`0 0 ${dims.w} ${dims.h}`}
+              preserveAspectRatio="none"
+              aria-hidden
+            >
+              <defs>
+                <mask id="trail-reveal">
+                  <path
+                    ref={maskRef}
+                    d={pathD}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth={14}
+                    strokeLinecap="round"
+                  />
+                </mask>
+              </defs>
+
+              {/* faint full route so all four stops are hinted ahead */}
+              <path
+                d={pathD}
                 fill="none"
-                stroke="currentColor"
-                strokeWidth={1.6}
-                className="h-7 w-7 text-teal-200"
-              >
-                {ICONS[i % ICONS.length]}
-              </svg>
-              <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-xs font-bold text-white shadow">
-                {i + 1}
-              </span>
-            </div>
+                stroke="white"
+                strokeOpacity={0.12}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeDasharray="0.5 12"
+              />
 
-            <div className="pt-3">
-              <h3 className="text-base font-bold text-white">{step.title}</h3>
-              <p className="mt-2 text-sm font-bold text-white/80">{step.body}</p>
-            </div>
-          </div>
-        ))}
+              {/* dotted trail, revealed up to the plane via the mask */}
+              <path
+                ref={trailRef}
+                d={pathD}
+                fill="none"
+                stroke="#5eead4"
+                strokeWidth={4}
+                strokeLinecap="round"
+                strokeDasharray="0.5 12"
+                mask="url(#trail-reveal)"
+              />
+
+              {/* paper plane, pointing +x so rotation matches travel */}
+              <g ref={planeRef} className="drop-shadow-[0_0_6px_rgba(94,234,212,0.7)]">
+                <path d="M -9 -7 L 12 0 L -9 7 L -4 0 Z" fill="#ccfbf1" />
+              </g>
+            </svg>
+          )}
+
+          {steps.map((step, i) => {
+            const p = POINTS[i];
+            const lit = i < litCount;
+            const above = p.fy < 0.5;
+            return (
+              <div
+                key={step.title}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${p.fx * 100}%`, top: `${p.fy * 100}%` }}
+              >
+                <div
+                  className={`flex h-16 w-16 items-center justify-center rounded-full border transition-all duration-500 ${
+                    lit
+                      ? "scale-110 border-teal-300 bg-teal-400/25 shadow-[0_0_24px_5px_rgba(94,234,212,0.5)]"
+                      : "border-white/25 bg-white/5"
+                  }`}
+                >
+                  <span
+                    className={`h-3 w-3 rounded-full transition-colors duration-500 ${
+                      lit ? "bg-teal-200" : "bg-white/40"
+                    }`}
+                  />
+                </div>
+                <div
+                  className={`absolute left-1/2 w-44 -translate-x-1/2 text-center text-sm font-bold transition-colors duration-500 ${
+                    lit ? "text-white" : "text-white/40"
+                  } ${above ? "bottom-full mb-3" : "top-full mt-3"}`}
+                >
+                  {step.title}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
