@@ -4,3 +4,4 @@ node_modules
 .env*
 GRADIENT_SETUP.md
 coverage
+worker

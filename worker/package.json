@@ -1,0 +1,22 @@
+{
+  "name": "benefy-apply-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Background worker: claims queued benefit-application submissions and executes them via Playwright (web_submit) or pdf-lib (pdf_fill). Separate DO App Platform worker component from the Next.js web service — see ../.do/app.yaml.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.2",
+    "pdf-lib": "^1.17.1",
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}

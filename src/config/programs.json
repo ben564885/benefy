@@ -43,7 +43,8 @@
         "zip_code": "field_zip_code",
         "sf_resident": "field_ca_resident",
         "current_programs": "field_existing_benefits"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -79,7 +80,9 @@
         "annual_income_gross": "field_annual_income",
         "zip_code": "field_zip_code",
         "current_programs": "field_categorical_program"
-      }
+      },
+      "apply_mode": "pdf_fill",
+      "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "pge_account_number"]
     }
   },
   {
@@ -115,7 +118,8 @@
         "has_disability": "field_disability_status",
         "sf_resident": "field_sf_residency",
         "zip_code": "field_zip_code"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -153,7 +157,8 @@
         "zip_code": "field_zip_code",
         "sf_resident": "field_ca_resident",
         "immigration_status": "field_immigration_status"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -191,7 +196,8 @@
         "has_disability": "field_disability_status",
         "member_ages": "field_applicant_age",
         "immigration_status": "field_immigration_status"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -230,7 +236,8 @@
         "has_disability": "field_disability_status",
         "member_ages": "field_applicant_age",
         "immigration_status": "field_immigration_status"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -267,7 +274,8 @@
         "has_disability": "field_disability_status",
         "member_ages": "field_applicant_age",
         "current_programs": "field_existing_benefits"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -302,7 +310,8 @@
         "monthly_income_gross": "field_monthly_income",
         "zip_code": "field_zip_code",
         "sf_resident": "field_sf_residency"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -352,7 +361,9 @@
         "household_size": "field_household_size",
         "annual_income_gross": "field_annual_income",
         "zip_code": "field_zip_code"
-      }
+      },
+      "apply_mode": "web_submit",
+      "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "phone", "email", "pge_account_number"]
     }
   },
   {
@@ -389,7 +400,9 @@
         "monthly_income_gross": "field_monthly_income",
         "zip_code": "field_zip_code",
         "current_programs": "field_existing_benefits"
-      }
+      },
+      "apply_mode": "web_submit",
+      "required_application_fields": ["legal_name", "date_of_birth", "street_address", "city", "mailing_zip_code", "phone", "pge_account_number"]
     }
   },
   {
@@ -422,7 +435,9 @@
         "household_size": "field_household_size",
         "annual_income_gross": "field_annual_income",
         "current_programs": "field_existing_benefits"
-      }
+      },
+      "apply_mode": "web_submit",
+      "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "phone", "email"]
     }
   },
   {
@@ -457,7 +472,9 @@
         "household_size": "field_household_size",
         "annual_income_gross": "field_annual_income",
         "zip_code": "field_zip_code"
-      }
+      },
+      "apply_mode": "web_submit",
+      "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "phone", "email", "sfpuc_account_number"]
     }
   },
   {
@@ -495,7 +512,8 @@
         "household_size": "field_household_size",
         "monthly_income_gross": "field_monthly_income",
         "zip_code": "field_zip_code"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -531,7 +549,8 @@
         "household_size": "field_household_size",
         "annual_income_gross": "field_annual_income",
         "zip_code": "field_zip_code"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -564,7 +583,9 @@
         "household_size": "field_household_size",
         "annual_income_gross": "field_annual_income",
         "current_programs": "field_existing_benefits"
-      }
+      },
+      "apply_mode": "web_submit",
+      "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "email", "phone"]
     }
   },
   {
@@ -596,7 +617,8 @@
         "display_name": "field_applicant_name",
         "has_disability": "field_disability_status",
         "zip_code": "field_zip_code"
-      }
+      },
+      "apply_mode": "assisted"
     }
   },
   {
@@ -630,7 +652,9 @@
         "display_name": "field_applicant_name",
         "annual_income_gross": "field_earned_income",
         "member_ages": "field_qualifying_children"
-      }
+      },
+      "apply_mode": "pdf_fill",
+      "required_application_fields": ["legal_name", "ssn_encrypted", "street_address", "city", "mailing_zip_code"]
     }
   }
 ]

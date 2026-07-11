@@ -2,6 +2,38 @@ export type ImmigrationStatus = "citizen" | "lpr" | "other" | "unknown";
 
 export type FieldStatus = "captured" | "missing" | "asked";
 
+// A household member's identity details, collected only when a specific
+// program adapter requires them (e.g. LIHEAP asks for SSNs of every income
+// earner in the household). ssn_encrypted is AES-256-GCM ciphertext (see
+// src/lib/apply/crypto.ts) — the plaintext SSN is never stored or logged.
+export interface HouseholdMember {
+  full_name: string;
+  date_of_birth: string | null;
+  relationship: string | null;
+  has_income: boolean | null;
+  ssn_encrypted: string | null;
+}
+
+// Fields real benefit application forms ask for beyond what the eligibility
+// engine needs. Nullable throughout: the apply flow's gap-fill step is what
+// prompts for these, one program's requirements at a time, rather than the
+// intake conversation front-loading fields most users will never need.
+export interface ApplicationProfile {
+  legal_name: string | null;
+  date_of_birth: string | null;
+  street_address: string | null;
+  city: string | null;
+  mailing_zip_code: string | null;
+  phone: string | null;
+  email: string | null;
+  preferred_language: "en" | "es" | null;
+  pge_account_number: string | null;
+  sfpuc_account_number: string | null;
+  household_members: HouseholdMember[];
+  ssn_last4: string | null;
+  ssn_encrypted: string | null;
+}
+
 export interface ClientProfile {
   client_id: string;
   display_name: string;
@@ -18,7 +50,24 @@ export interface ClientProfile {
   intake_notes: string;
   field_status: Record<string, FieldStatus>;
   last_screened_at: string | null;
+  application_profile: ApplicationProfile;
 }
+
+export const EMPTY_APPLICATION_PROFILE: ApplicationProfile = {
+  legal_name: null,
+  date_of_birth: null,
+  street_address: null,
+  city: null,
+  mailing_zip_code: null,
+  phone: null,
+  email: null,
+  preferred_language: null,
+  pge_account_number: null,
+  sfpuc_account_number: null,
+  household_members: [],
+  ssn_last4: null,
+  ssn_encrypted: null,
+};
 
 // fpl_pct / ami_pct: standard percent-of-basis test against the shared FPL/AMI
 // tables (fpl_table.json / ami_table.json).
@@ -71,6 +120,17 @@ export interface ProgramDefinition {
     form_name: string;
     form_url: string;
     prefill_map: Record<string, string>;
+    // web_submit: a worker adapter fills and submits a real online form.
+    // pdf_fill: a worker adapter generates a completed, downloadable PDF.
+    // assisted: no automation exists (auth-walled portal, in-person step, or
+    // lottery/informational page) — the user gets the existing prefill-sheet
+    // handoff only. Defaults to "assisted" when omitted.
+    apply_mode?: "web_submit" | "pdf_fill" | "assisted";
+    // ApplicationProfile / HouseholdMember keys (dot-path for household
+    // members, e.g. "household_members[].ssn_encrypted") this program's
+    // adapter needs beyond ClientProfile. Drives the apply flow's gap-fill
+    // step. Omitted/empty for assisted-mode programs.
+    required_application_fields?: string[];
   };
 }
 
@@ -115,4 +175,51 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+}
+
+// One submission job per program a client applies to. The worker (see
+// worker/) is the only process that moves a row past "collecting_info" —
+// the web app only enqueues and reads status.
+export type SubmissionStatus =
+  | "queued"
+  | "collecting_info"
+  | "filling"
+  | "awaiting_review"
+  | "submitting"
+  | "submitted"
+  | "failed"
+  | "needs_human";
+
+export interface SubmissionArtifact {
+  kind: "screenshot" | "pdf" | "receipt";
+  label: string;
+  // Signed/relative URL into private Supabase Storage, or a data URL for
+  // small receipts — never a public link.
+  url: string;
+  created_at: string;
+}
+
+export interface Submission {
+  id: string;
+  client_id: string;
+  program_id: string;
+  apply_mode: "web_submit" | "pdf_fill" | "assisted";
+  status: SubmissionStatus;
+  consent_id: string;
+  artifacts: SubmissionArtifact[];
+  receipt_note: string | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+  claimed_at: string | null;
+}
+
+// Recorded once per apply action (which may cover several programs at
+// once), not once per submission — see the "confirm all" flow.
+export interface Consent {
+  id: string;
+  client_id: string;
+  program_ids: string[];
+  consent_text_version: string;
+  accepted_at: string;
 }

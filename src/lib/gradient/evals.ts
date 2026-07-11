@@ -13,6 +13,7 @@
 
 import { getProgram, screenClient } from "@/lib/engine";
 import { explainScreening } from "@/lib/gradient/navigatorAgent";
+import { EMPTY_APPLICATION_PROFILE } from "@/lib/types";
 import type { ClientProfile, EligibilityStatus, TraceStep } from "@/lib/types";
 
 interface EvalCase {
@@ -39,6 +40,7 @@ function profile(overrides: Partial<ClientProfile>): ClientProfile {
     intake_notes: "",
     field_status: {},
     last_screened_at: null,
+    application_profile: EMPTY_APPLICATION_PROFILE,
     ...overrides,
   };
 }

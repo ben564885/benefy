@@ -47,6 +47,14 @@ export async function buildPrefill(clientId: string, programId: string): Promise
     value: formatValue(record.profile, profileKey),
   }));
 
+  const applyMode = program.application.apply_mode ?? "assisted";
+  const label =
+    applyMode === "assisted"
+      ? "Pre-filled draft — review and submit. This tool does not submit this application electronically; use \"Apply automatically\" above for programs that support it."
+      : applyMode === "pdf_fill"
+        ? "Pre-filled draft — the \"Apply automatically\" panel above can generate a completed PDF for this program. You still need to sign and submit it yourself."
+        : "Pre-filled draft — the \"Apply automatically\" panel above can fill and submit this application for you, with your review before anything is sent.";
+
   return {
     ok: true,
     data: {
@@ -56,7 +64,7 @@ export async function buildPrefill(clientId: string, programId: string): Promise
       form_url: program.application.form_url,
       required_documents: program.required_documents ?? [],
       fields,
-      label: "Pre-filled draft — review and submit. This tool does not submit applications electronically.",
+      label,
       generated_at: new Date().toISOString(),
     },
   };

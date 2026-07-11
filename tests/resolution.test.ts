@@ -7,6 +7,7 @@ import {
   nextResolvableTarget,
 } from "@/lib/gradient/resolutionAgent";
 import { routeTurn } from "@/lib/gradient/router";
+import { EMPTY_APPLICATION_PROFILE } from "@/lib/types";
 import type { ClientProfile } from "@/lib/types";
 
 function makeProfile(overrides: Partial<ClientProfile> = {}): ClientProfile {
@@ -26,6 +27,7 @@ function makeProfile(overrides: Partial<ClientProfile> = {}): ClientProfile {
     intake_notes: "",
     field_status: {},
     last_screened_at: null,
+    application_profile: EMPTY_APPLICATION_PROFILE,
     ...overrides,
   };
 }
