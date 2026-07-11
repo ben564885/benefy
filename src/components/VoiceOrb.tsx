@@ -1,18 +1,25 @@
 "use client";
 
+import { useId } from "react";
+
 export type VoiceOrbStatus = "idle" | "connecting" | "connected" | "error";
 
 interface VoiceOrbProps {
   status: VoiceOrbStatus;
-  /** Realtime audio energy (0-1) from mic/assistant, drives glow intensity. */
+  /** Realtime audio energy (0-1) from mic/assistant, drives the flow amplitude. */
   level?: number;
   size?: number;
 }
 
 export default function VoiceOrb({ status, level = 0, size = 160 }: VoiceOrbProps) {
-  const glow = Math.min(1, level * 2.2);
+  const uid = useId();
+  const filterId = `voice-orb-flow-${uid}`;
+  const gradId = `voice-orb-fill-${uid}`;
+
+  const energy = Math.min(1, level * 2.2);
   const isError = status === "error";
   const isLive = status === "connected" || status === "connecting";
+  const displacement = 12 + energy * 26;
 
   return (
     <div className="relative mx-auto" style={{ width: size, height: size }} aria-hidden="true">
@@ -22,35 +29,36 @@ export default function VoiceOrb({ status, level = 0, size = 160 }: VoiceOrbProp
           background:
             "radial-gradient(circle, rgba(45,212,191,0.55) 0%, rgba(13,148,136,0.22) 45%, transparent 72%)",
           opacity: isError ? 0.25 : status === "connected" ? 1 : status === "connecting" ? 0.7 : 0.4,
-          transform: `scale(${1 + glow * 0.3})`,
+          transform: `scale(${1 + energy * 0.35})`,
         }}
       />
-      <div
-        className={`absolute inset-0 rounded-full ${isLive ? "animate-orb-spin" : ""}`}
-        style={{
-          background: "conic-gradient(from 0deg, transparent 0%, rgba(45,212,191,0.9) 25%, transparent 55%)",
-          filter: "blur(6px)",
-          opacity: isError ? 0.2 : 0.8,
-        }}
-      />
-      <div
-        className={`absolute inset-[6%] rounded-full ${isLive ? "animate-orb-spin-reverse" : ""}`}
-        style={{
-          background: "conic-gradient(from 130deg, transparent 0%, rgba(94,234,212,0.85) 30%, transparent 58%)",
-          filter: "blur(5px)",
-          opacity: isError ? 0.15 : 0.7,
-        }}
-      />
-      <div
-        className="absolute inset-[16%] rounded-full transition-transform duration-150 ease-out"
-        style={{
-          background: isError
-            ? "radial-gradient(circle at 35% 30%, #fee2e2, #f87171 55%, #b91c1c 100%)"
-            : "radial-gradient(circle at 35% 30%, #f0fdfa, #5eead4 45%, #0d9488 100%)",
-          boxShadow: `0 0 ${18 + glow * 42}px rgba(13,148,136,${0.3 + glow * 0.35})`,
-          transform: `scale(${1 + glow * 0.14})`,
-        }}
-      />
+      <svg
+        viewBox="0 0 200 200"
+        width="100%"
+        height="100%"
+        className={`absolute inset-0 transition-opacity duration-300 ${isLive ? "animate-orb-spin" : ""}`}
+        style={{ opacity: isError ? 0.85 : status === "idle" ? 0.75 : 1, transformOrigin: "50% 50%" }}
+      >
+        <defs>
+          <radialGradient id={gradId} cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stopColor={isError ? "#fee2e2" : "#f0fdfa"} />
+            <stop offset="45%" stopColor={isError ? "#f87171" : "#5eead4"} />
+            <stop offset="100%" stopColor={isError ? "#b91c1c" : "#0d9488"} />
+          </radialGradient>
+          <filter id={filterId} x="-60%" y="-60%" width="220%" height="220%">
+            <feTurbulence type="fractalNoise" numOctaves={2} seed={4} result="noise">
+              <animate
+                attributeName="baseFrequency"
+                dur={isLive ? "10s" : "36s"}
+                values="0.014 0.018;0.021 0.013;0.015 0.022;0.014 0.018"
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale={displacement} xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+        <circle cx="100" cy="100" r="70" fill={`url(#${gradId})`} filter={`url(#${filterId})`} />
+      </svg>
     </div>
   );
 }

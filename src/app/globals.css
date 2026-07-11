@@ -36,23 +36,12 @@ body {
   }
 }
 
-@keyframes orb-spin-reverse {
-  to {
-    transform: rotate(-360deg);
-  }
-}
-
 .animate-orb-spin {
-  animation: orb-spin 7s linear infinite;
-}
-
-.animate-orb-spin-reverse {
-  animation: orb-spin-reverse 9s linear infinite;
+  animation: orb-spin 16s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-orb-spin,
-  .animate-orb-spin-reverse {
+  .animate-orb-spin {
     animation: none;
   }
 }
