@@ -32,7 +32,17 @@ export default function ResultsCard({
   onRecheck,
 }: Props) {
   const [showTrace, setShowTrace] = useState(false);
+  const [showIneligible, setShowIneligible] = useState(false);
   const programName = (id: string) => programs.find((p) => p.program_id === id)?.name ?? id;
+
+  // Only surface programs worth the user's attention — wins first, then the
+  // ones a quick answer could unlock. Likely-ineligible results stay out of
+  // the reveal entirely, behind the disclosure toggle below.
+  const shownResults = [
+    ...screening.results.filter((r) => r.status === "likely_eligible"),
+    ...screening.results.filter((r) => r.status === "needs_review"),
+  ];
+  const ineligibleResults = screening.results.filter((r) => r.status === "likely_ineligible");
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
@@ -55,16 +65,46 @@ export default function ResultsCard({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {screening.results.map((r) => (
-          <ProgramCard
+        {shownResults.map((r, i) => (
+          <div
             key={r.program_id}
-            result={r}
-            programName={programName(r.program_id)}
-            clientId={clientId}
-            onResolve={r.status === "needs_review" ? () => onResolve(r.program_id) : undefined}
-          />
+            className="animate-benefit-pop h-full"
+            style={{ animationDelay: `${100 + i * 120}ms` }}
+          >
+            <ProgramCard
+              result={r}
+              programName={programName(r.program_id)}
+              clientId={clientId}
+              onResolve={r.status === "needs_review" ? () => onResolve(r.program_id) : undefined}
+            />
+          </div>
         ))}
       </div>
+
+      {ineligibleResults.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowIneligible((v) => !v)}
+            className="text-xs font-medium text-slate-400 hover:text-slate-600"
+          >
+            {showIneligible
+              ? "Hide programs you're likely not eligible for ▲"
+              : `${ineligibleResults.length} program(s) screened likely not eligible — show ▼`}
+          </button>
+          {showIneligible && (
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {ineligibleResults.map((r) => (
+                <ProgramCard
+                  key={r.program_id}
+                  result={r}
+                  programName={programName(r.program_id)}
+                  clientId={clientId}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {!explanation && explanationPending && (
         <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">

@@ -73,7 +73,7 @@ export default function ProgramCard({ result, programName, clientId, onResolve }
   }
 
   return (
-    <div className={`rounded-xl border ${style.border} ${style.bg} p-5 shadow-sm`}>
+    <div className={`h-full rounded-xl border ${style.border} ${style.bg} p-5 shadow-sm`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold text-slate-900">{programName}</h3>
