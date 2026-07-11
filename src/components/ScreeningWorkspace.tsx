@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ChatMessage, ClientProfile, ClientRecord, ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import ChatPanel, { type ThreadItem } from "@/components/ChatPanel";
+import { missingSeniorDisabilityField, missingVeteranField } from "@/lib/gradient/intakeExtractor";
 import RealtimeVoiceIntake from "@/components/RealtimeVoiceIntake";
 import { LANGS, type Lang } from "@/lib/i18n";
 
@@ -20,6 +21,18 @@ function isReadyToScreen(profile: ClientProfile): boolean {
     (profile.monthly_income_gross != null || profile.annual_income_gross != null) &&
     profile.sf_resident != null &&
     profile.immigration_status != null
+  );
+}
+
+function canRunScreen(
+  profile: ClientProfile,
+  seniorStepDismissed: boolean,
+  veteranStepDismissed: boolean,
+): boolean {
+  return (
+    isReadyToScreen(profile) &&
+    (!missingSeniorDisabilityField(profile) || seniorStepDismissed) &&
+    (profile.is_veteran != null || veteranStepDismissed)
   );
 }
 
@@ -49,6 +62,12 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
   );
   const [hasScreening, setHasScreening] = useState(initialRecord.last_screening != null);
   const [screeningLoading, setScreeningLoading] = useState(false);
+  const [seniorStepDismissed, setSeniorStepDismissed] = useState(
+    !missingSeniorDisabilityField(initialRecord.profile),
+  );
+  const [veteranStepDismissed, setVeteranStepDismissed] = useState(
+    initialRecord.profile.is_veteran != null,
+  );
   const [intakeMode, setIntakeMode] = useState<"text" | "voice">("text");
   const [lang, setLang] = useState<Lang>("en");
 
@@ -119,6 +138,37 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     }
   }
 
+  async function handleAskQuestion(question: string): Promise<string | null> {
+    const res = await fetch(`/api/clients/${clientId}/intake`, {
+      method: "POST",
+      body: JSON.stringify({ message: question, lang }),
+    });
+    const data = await res.json();
+    if (!res.ok) return "Sorry, I couldn't answer that right now. Please try again.";
+
+    const reply =
+      data.assistant_reply?.trim() ||
+      "I couldn't generate an answer. Try asking about a specific program, or click \"What does this mean?\"";
+
+    setThread((prev) => [
+      ...prev,
+      {
+        kind: "message",
+        message: { role: "user", content: question, timestamp: new Date().toISOString() },
+      },
+      {
+        kind: "message" as const,
+        message: {
+          role: "assistant" as const,
+          content: reply,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    ]);
+
+    return reply;
+  }
+
   async function handleSend(message: string, guided?: boolean, display?: string) {
     setThread((prev) => [
       ...prev,
@@ -135,7 +185,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     const data = await res.json();
     if (!res.ok) return;
 
-    if (data.assistant_reply) {
+    if (data.assistant_reply?.trim()) {
       setThread((prev) => [
         ...prev,
         {
@@ -143,12 +193,51 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
           message: { role: "assistant", content: data.assistant_reply, timestamp: new Date().toISOString() },
         },
       ]);
+    } else if (hasScreening && data.target === "navigator") {
+      setThread((prev) => [
+        ...prev,
+        {
+          kind: "message",
+          message: {
+            role: "assistant",
+            content: "I couldn't generate an answer. Try asking about a specific program by name.",
+            timestamp: new Date().toISOString(),
+          },
+        },
+      ]);
     }
 
     const updatedProfile: ClientProfile = data.profile ?? profile;
     if (data.profile) setProfile(data.profile);
+    if (!missingSeniorDisabilityField(updatedProfile)) {
+      setSeniorStepDismissed(true);
+    }
+    if (updatedProfile.is_veteran != null) {
+      setVeteranStepDismissed(true);
+    }
 
-    if (!hasScreening && isReadyToScreen(updatedProfile)) {
+    const readyToScreen = canRunScreen(
+      updatedProfile,
+      seniorStepDismissed || !missingSeniorDisabilityField(updatedProfile),
+      veteranStepDismissed || updatedProfile.is_veteran != null,
+    );
+    if (!hasScreening && readyToScreen) {
+      await runScreen();
+    } else if (hasScreening && data.ready_to_screen) {
+      await runScreen();
+    }
+  }
+
+  async function handleSkipSenior() {
+    setSeniorStepDismissed(true);
+    if (!hasScreening && canRunScreen(profile, true, veteranStepDismissed)) {
+      await runScreen();
+    }
+  }
+
+  async function handleSkipVeteran() {
+    setVeteranStepDismissed(true);
+    if (!hasScreening && canRunScreen(profile, seniorStepDismissed, true)) {
       await runScreen();
     }
   }
@@ -213,9 +302,15 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
           programs={programs}
           lang={lang}
           onSend={handleSend}
+          onSkipSenior={handleSkipSenior}
+          onSkipVeteran={handleSkipVeteran}
           onResolve={handleResolve}
           onRecheck={runScreen}
           screeningLoading={screeningLoading}
+          seniorStepDismissed={seniorStepDismissed}
+          veteranStepDismissed={veteranStepDismissed}
+          hasScreening={hasScreening}
+          onAskQuestion={handleAskQuestion}
         />
       ) : (
         <RealtimeVoiceIntake clientId={clientId} lang={lang} onProfileUpdated={refreshRecord} />

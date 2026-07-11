@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { isLocalDevWithoutSupabase } from "@/lib/devMode";
 
 // Next.js 16 renamed Middleware to Proxy (same mechanism) — see
 // node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md.
@@ -9,6 +10,10 @@ import { createServerClient } from "@supabase/ssr";
 // routes. Real ownership enforcement (does this user own *this* client_id)
 // happens per-request in src/lib/auth.ts, close to the data.
 export async function proxy(request: NextRequest) {
+  if (isLocalDevWithoutSupabase()) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

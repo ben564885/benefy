@@ -12,6 +12,7 @@ function makeProfile(overrides: Partial<ClientProfile> = {}): ClientProfile {
     member_ages: [34, 8, 5],
     has_senior: false,
     has_disability: false,
+    is_veteran: null,
     immigration_status: "citizen",
     sf_resident: true,
     zip_code: "94102",

@@ -7,20 +7,29 @@
 
 export type AgentTarget = "intake" | "navigator";
 
-const NAVIGATOR_SIGNALS = [
-  /\bwhy\b/,
-  /\bwhat (documents?|paperwork)\b/,
-  /\bhow (do|does|can)\b.*\bapply\b/,
-  /\bexplain\b/,
-  /\bwhat'?s next\b/,
-  /\bwhat does .* mean\b/,
-  /\bneeds? review\b.*\bwhy\b/,
-  /\bwhich programs?\b/,
+// After a screening exists, only route back to Intake when the user is
+// clearly correcting or adding profile facts — everything else (questions
+// about results, programs, documents, or how Benefy works) goes to Navigator.
+const INTAKE_UPDATE_SIGNALS = [
+  /\$\d/,
+  /\bhousehold of\b/,
+  /\bi live (in|outside)\b/,
+  /\bmy income\b/,
+  /\bactually\b/,
+  /\bcorrect\b/,
+  /\bupdate my\b/,
+  /\bi(?:'m| am) a (u\.?s\.? )?citizen\b/,
+  /\bpermanent resident\b/,
+  /\bveteran\b|\bmilitary\b/,
+  /\bsenior\b|\bdisabilit/,
 ];
 
 export function routeTurn(userText: string, hasExistingScreening: boolean): AgentTarget {
-  const lower = userText.toLowerCase();
-  if (hasExistingScreening && NAVIGATOR_SIGNALS.some((p) => p.test(lower))) {
+  if (hasExistingScreening) {
+    const lower = userText.toLowerCase();
+    if (INTAKE_UPDATE_SIGNALS.some((p) => p.test(lower))) {
+      return "intake";
+    }
     return "navigator";
   }
   return "intake";

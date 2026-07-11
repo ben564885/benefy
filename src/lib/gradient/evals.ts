@@ -32,6 +32,7 @@ function profile(overrides: Partial<ClientProfile>): ClientProfile {
     member_ages: [],
     has_senior: null,
     has_disability: null,
+    is_veteran: null,
     immigration_status: null,
     sf_resident: null,
     zip_code: null,

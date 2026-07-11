@@ -8,6 +8,7 @@ import {
   missingSeniorDisabilityField,
 } from "@/lib/gradient/intakeExtractor";
 import { INTAKE_STRINGS, type Lang } from "@/lib/i18n";
+import LinkifiedText from "@/components/LinkifiedText";
 import ResultsCard from "@/components/ResultsCard";
 
 export type ThreadItem =
@@ -29,9 +30,15 @@ interface Props {
   programs: ProgramDefinition[];
   lang?: Lang;
   onSend: (message: string, guided?: boolean, display?: string) => Promise<void>;
+  onSkipSenior?: () => void;
+  onSkipVeteran?: () => void;
   onResolve: (programId: string) => void;
   onRecheck?: () => void;
   screeningLoading?: boolean;
+  seniorStepDismissed?: boolean;
+  veteranStepDismissed?: boolean;
+  hasScreening?: boolean;
+  onAskQuestion?: (question: string) => Promise<string | null>;
   disabled?: boolean;
   placeholder?: string;
 }
@@ -42,6 +49,7 @@ type ActiveField =
   | "sf_resident"
   | "immigration_status"
   | "senior_disability"
+  | "veteran_status"
   | null;
 
 function IncomeQuickInput({
@@ -117,9 +125,15 @@ export default function ChatPanel({
   programs,
   lang = "en",
   onSend,
+  onSkipSenior,
+  onSkipVeteran,
   onResolve,
   onRecheck,
   screeningLoading,
+  seniorStepDismissed = false,
+  veteranStepDismissed = false,
+  hasScreening = false,
+  onAskQuestion,
   disabled,
   placeholder,
 }: Props) {
@@ -136,14 +150,22 @@ export default function ChatPanel({
 
   const missing = missingCoreFields(profile);
   const coreDone = missing.length === 0;
-  const showOptional = coreDone && missingSeniorDisabilityField(profile);
+  const seniorStepDone = !missingSeniorDisabilityField(profile) || seniorStepDismissed;
+  const showSeniorOptional = coreDone && missingSeniorDisabilityField(profile) && !seniorStepDismissed;
+  const showVeteranOptional = coreDone && seniorStepDone && profile.is_veteran == null && !veteranStepDismissed;
   const activeField: ActiveField = !coreDone
     ? (missing[0].key as ActiveField)
-    : showOptional
+    : showSeniorOptional
       ? "senior_disability"
-      : null;
+      : showVeteranOptional
+        ? "veteran_status"
+        : null;
   const questionNumber = CORE_REQUIRED_FIELDS.length - missing.length + 1;
-  const questionPrompt = !coreDone ? t.prompts[missing[0].key as string] : t.seniorDisabilityPrompt;
+  const questionPrompt = !coreDone
+    ? t.prompts[missing[0].key as string]
+    : showSeniorOptional
+      ? t.seniorDisabilityPrompt
+      : t.veteranPrompt;
 
   async function submitMessage(text: string, guided = false, display?: string) {
     if (!text.trim() || sending) return;
@@ -187,7 +209,14 @@ export default function ChatPanel({
                   item.message.role === "user" ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-800"
                 }`}
               >
-                {item.message.content}
+                {item.message.role === "assistant" ? (
+                  <LinkifiedText
+                    text={item.message.content}
+                    linkClassName="text-teal-800 underline underline-offset-2 hover:text-teal-900"
+                  />
+                ) : (
+                  item.message.content
+                )}
               </div>
             </div>
           ) : (
@@ -201,6 +230,8 @@ export default function ChatPanel({
               citations={item.citations}
               mode={item.mode}
               trace={item.trace}
+              lang={lang}
+              onAsk={onAskQuestion}
               onResolve={onResolve}
               onRecheck={onRecheck}
             />
@@ -225,7 +256,7 @@ export default function ChatPanel({
             {activeField === "monthly_income_gross" ? (
               <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {t.chips[activeField].map((chip) => (
                   <button
                     key={chip.value}
@@ -237,6 +268,16 @@ export default function ChatPanel({
                     {chip.label}
                   </button>
                 ))}
+                {(activeField === "senior_disability" || activeField === "veteran_status") && (
+                  <button
+                    type="button"
+                    disabled={disabled || sending}
+                    onClick={activeField === "senior_disability" ? onSkipSenior : onSkipVeteran}
+                    className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t.skipOptionalLabel}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -247,7 +288,9 @@ export default function ChatPanel({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={disabled || sending}
-            placeholder={placeholder ?? t.composerPlaceholder}
+            placeholder={
+              hasScreening ? t.summaryAskPlaceholder : (placeholder ?? t.composerPlaceholder)
+            }
             className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
           />
           <button

@@ -27,6 +27,7 @@ export const CHECK_ELIGIBILITY_TOOL: GradientToolDefinition = {
         member_ages: { type: "array", items: { type: "integer" } },
         has_senior: { type: "boolean" },
         has_disability: { type: "boolean" },
+        is_veteran: { type: "boolean" },
         immigration_status: {
           type: "string",
           enum: ["citizen", "lpr", "other", "unknown"],
@@ -59,6 +60,7 @@ export const UPDATE_PROFILE_TOOL: GradientToolDefinition = {
         member_ages: { type: "array", items: { type: "integer" } },
         has_senior: { type: "boolean" },
         has_disability: { type: "boolean" },
+        is_veteran: { type: "boolean" },
         immigration_status: {
           type: "string",
           enum: ["citizen", "lpr", "other", "unknown"],

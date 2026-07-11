@@ -123,6 +123,18 @@ export function extractProfilePatch(
     patch.has_disability = false;
   }
 
+  // --- Veteran / military service ---
+  if (
+    /\bveteran\b|\bformer military\b|\bex-?military\b|\barmed forces\b|\b(military|army|navy|marines|air force|coast guard) service\b|\bserved in the (army|navy|marines|air force|coast guard)\b/.test(
+      lower,
+    )
+  ) {
+    patch.is_veteran = true;
+  }
+  if (/\bnot a veteran\b|\bno military service\b|\bnever served\b|\bnot in the military\b/.test(lower)) {
+    patch.is_veteran = false;
+  }
+
   // --- Immigration status ---
   if (/\bcitizen\b/.test(lower) && !/non-?citizen/.test(lower)) {
     patch.immigration_status = "citizen";
@@ -192,4 +204,8 @@ export function missingCoreFields(profile: ClientProfile): typeof CORE_REQUIRED_
 
 export function missingSeniorDisabilityField(profile: ClientProfile): boolean {
   return profile.has_senior == null && profile.has_disability == null;
+}
+
+export function missingVeteranField(profile: ClientProfile): boolean {
+  return profile.is_veteran == null;
 }

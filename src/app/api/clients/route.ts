@@ -30,6 +30,7 @@ export async function POST(request: Request) {
     member_ages: [],
     has_senior: null,
     has_disability: null,
+    is_veteran: null,
     immigration_status: null,
     sf_resident: null,
     zip_code: null,

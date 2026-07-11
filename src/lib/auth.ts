@@ -1,4 +1,5 @@
 import { getClient, getClientOwnerId } from "@/lib/store";
+import { DEV_USER_ID, isLocalDevWithoutSupabase } from "@/lib/devMode";
 import { createServerSupabaseClient } from "@/lib/supabase-auth/serverClient";
 import type { ClientRecord } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
@@ -11,6 +12,9 @@ import type { User } from "@supabase/supabase-js";
 // service-role client, which bypasses RLS).
 
 export async function getAuthedUser(): Promise<User | null> {
+  if (isLocalDevWithoutSupabase()) {
+    return { id: DEV_USER_ID, email: "dev@local" } as User;
+  }
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
