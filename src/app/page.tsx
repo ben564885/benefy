@@ -59,7 +59,13 @@ export default function HomePage() {
       >
         <source src="/bggg.mp4" type="video/mp4" />
       </video>
-      <div className="fixed inset-0 -z-10 bg-black/45" />
+      <div className="fixed inset-0 -z-10 bg-black/55" />
+      <div
+        className="fixed inset-0 -z-10"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.4) 100%)",
+        }}
+      />
 
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
         <Link href="/" className="flex items-center">
