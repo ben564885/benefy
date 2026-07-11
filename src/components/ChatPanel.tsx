@@ -303,44 +303,45 @@ export default function ChatPanel({
               </div>
             </div>
           )}
-          {activeField && !sendingGuided && (
-            <div ref={lastItemRef} className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6">
-              <span className="pl-1 text-xs font-medium text-slate-400">
-                {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
-              </span>
-              {activeField === "monthly_income_gross" ? (
-                <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
-              ) : (
-                <div className="flex flex-wrap items-center gap-2">
-                  {t.chips[activeField].map((chip) => (
-                    <button
-                      key={chip.value}
-                      type="button"
-                      disabled={disabled || sending}
-                      onClick={() => submitMessage(chip.value, true, chip.label)}
-                      className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-base font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                  {activeField === "veteran_status" && (
-                    <button
-                      type="button"
-                      disabled={disabled || sending}
-                      onClick={onSkipVeteran}
-                      className="rounded-full border border-transparent px-5 py-2.5 text-base font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {t.skipOptionalLabel}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 pt-4">
+        {activeField && !sendingGuided && (
+          <div className="flex flex-col gap-2">
+            <span className="pl-1 text-xs font-medium text-slate-400">
+              {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
+            </span>
+            {activeField === "monthly_income_gross" ? (
+              <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                {t.chips[activeField].map((chip) => (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    disabled={disabled || sending}
+                    onClick={() => submitMessage(chip.value, true, chip.label)}
+                    className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-base font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+                {activeField === "veteran_status" && (
+                  <button
+                    type="button"
+                    disabled={disabled || sending}
+                    onClick={onSkipVeteran}
+                    className="rounded-full border border-transparent px-5 py-2.5 text-base font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t.skipOptionalLabel}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {resolving && (
           <div className="flex w-fit items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-medium text-amber-800">
             <span>{t.resolvingLabel(resolving.name)}</span>
