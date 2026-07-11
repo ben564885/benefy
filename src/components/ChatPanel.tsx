@@ -33,6 +33,7 @@ interface Props {
   veteranStepDismissed?: boolean;
   hasScreening?: boolean;
   onAskQuestion?: (question: string) => Promise<string | null>;
+  onQuestionAsked?: (question: string) => void;
   disabled?: boolean;
   placeholder?: string;
   resolving?: { programId: string; name: string } | null;
@@ -128,6 +129,7 @@ export default function ChatPanel({
   veteranStepDismissed = false,
   hasScreening = false,
   onAskQuestion,
+  onQuestionAsked,
   disabled,
   placeholder,
   resolving,
@@ -139,6 +141,7 @@ export default function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastItemRef = useRef<HTMLDivElement>(null);
   const firstScroll = useRef(true);
+  const announcedFieldRef = useRef<ActiveField>(null);
   const t = INTAKE_STRINGS[lang];
 
   useEffect(() => {
@@ -172,6 +175,13 @@ export default function ChatPanel({
     : showVeteranOptional
       ? t.veteranPrompt
       : "";
+
+  useEffect(() => {
+    if (activeField && questionPrompt && announcedFieldRef.current !== activeField) {
+      announcedFieldRef.current = activeField;
+      onQuestionAsked?.(questionPrompt);
+    }
+  }, [activeField, questionPrompt, onQuestionAsked]);
 
   async function submitMessage(text: string, guided = false, display?: string) {
     if (!text.trim() || sending) return;
@@ -251,23 +261,45 @@ export default function ChatPanel({
               </div>
             );
           })}
-          {activeField && (
-            <div className="flex flex-col gap-1">
-              <span className="px-1 text-xs font-medium text-slate-400">
-                {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
-              </span>
-              <div className="flex justify-start">
-                <div className="w-full rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-800">
-                  {questionPrompt}
-                </div>
-              </div>
-            </div>
-          )}
           {((sending && !sendingGuided) || screeningLoading) && (
             <div className="flex justify-start">
               <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
                 {screeningLoading ? t.checking : t.thinking}
               </div>
+            </div>
+          )}
+          {activeField && !sendingGuided && (
+            <div ref={lastItemRef} className="flex flex-col gap-2">
+              <span className="pl-1 text-xs font-medium text-slate-400">
+                {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
+              </span>
+              {activeField === "monthly_income_gross" ? (
+                <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  {t.chips[activeField].map((chip) => (
+                    <button
+                      key={chip.value}
+                      type="button"
+                      disabled={disabled || sending}
+                      onClick={() => submitMessage(chip.value, true, chip.label)}
+                      className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                  {activeField === "veteran_status" && (
+                    <button
+                      type="button"
+                      disabled={disabled || sending}
+                      onClick={onSkipVeteran}
+                      className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {t.skipOptionalLabel}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -287,35 +319,8 @@ export default function ChatPanel({
             </button>
           </div>
         )}
-        {activeField ? (
-          activeField === "monthly_income_gross" ? (
-            <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
-          ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              {t.chips[activeField].map((chip) => (
-                <button
-                  key={chip.value}
-                  type="button"
-                  disabled={disabled || sending}
-                  onClick={() => submitMessage(chip.value, true, chip.label)}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {chip.label}
-                </button>
-              ))}
-              {activeField === "veteran_status" && (
-                <button
-                  type="button"
-                  disabled={disabled || sending}
-                  onClick={onSkipVeteran}
-                  className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {t.skipOptionalLabel}
-                </button>
-              )}
-            </div>
-          )
-        ) : (
+
+        {!activeField && (
           <form
             onSubmit={handleSubmit}
             className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm"

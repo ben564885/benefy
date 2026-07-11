@@ -60,6 +60,16 @@ export default function ScreeningWorkspace({
   const [lang, setLang] = useState<Lang>("en");
   const [resolving, setResolving] = useState<{ programId: string; name: string } | null>(null);
 
+  function handleQuestionAsked(text: string) {
+    setThread((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.kind === "message" && last.message.role === "assistant" && last.message.content === text) {
+        return prev;
+      }
+      return [...prev, { kind: "message", message: { role: "assistant", content: text, timestamp: new Date().toISOString() } }];
+    });
+  }
+
   async function refreshRecord() {
     const res = await fetch(`/api/clients/${clientId}`);
     const data = await res.json();
@@ -307,6 +317,7 @@ export default function ScreeningWorkspace({
           veteranStepDismissed={veteranStepDismissed}
           hasScreening={hasScreening}
           onAskQuestion={handleAskQuestion}
+          onQuestionAsked={handleQuestionAsked}
           resolving={resolving}
           onCancelResolve={() => setResolving(null)}
         />
