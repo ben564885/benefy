@@ -23,6 +23,25 @@ const ROW_TWO = [
   "Zero guesswork",
 ];
 
+const PROGRAM_TABLE = [
+  {
+    name: "CalFresh",
+    logo: { src: "/logos/calfresh.jpg", alt: "CalFresh" },
+    description: "Monthly grocery assistance based on household size and income.",
+    highlight: true,
+  },
+  {
+    name: "PG&E CARE",
+    logo: { src: "/logos/pge.svg", alt: "PG&E" },
+    description: "A discounted rate on your monthly gas and electric bill.",
+  },
+  {
+    name: "SFMTA Lifeline",
+    logo: { src: "/logos/muni.svg", alt: "SFMTA Muni" },
+    description: "Reduced-fare Muni passes for qualifying San Francisco residents.",
+  },
+];
+
 const STEPS = [
   {
     title: "Tell us about yourself",
@@ -130,9 +149,48 @@ export default function HomePage() {
         <div className="bg-dot-grid absolute -bottom-4 -left-4 hidden h-16 w-16 -rotate-6 text-teal-200 opacity-70 lg:block" />
       </section>
 
-      <section id="programs" className="flex flex-col gap-3 pb-16">
+      <section className="flex flex-col gap-3 pb-16">
         <MarqueeRow items={ROW_ONE} direction="left" />
         <MarqueeRow items={ROW_TWO} direction="right" />
+      </section>
+
+      <section id="programs" className="relative mx-auto w-full max-w-4xl px-6 pb-24">
+        <span className="guide-sphere animate-sphere-float absolute -top-6 right-8 hidden h-14 w-14 rounded-full sm:block" />
+
+        <div className="mb-10 text-center">
+          <p className="text-sm font-medium uppercase tracking-wide text-teal-700">Programs</p>
+          <h2 className="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
+            Tailored to your household
+          </h2>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+          {PROGRAM_TABLE.map((program, i) => (
+            <div
+              key={program.name}
+              className={`flex flex-col items-start gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between ${
+                i > 0 ? "border-t border-slate-200" : ""
+              } ${program.highlight ? "bg-amber-50" : "bg-white"}`}
+            >
+              <div className="flex items-center gap-3 sm:w-40 sm:shrink-0">
+                <Image
+                  src={program.logo.src}
+                  alt={program.logo.alt}
+                  width={40}
+                  height={16}
+                  className="h-4 w-auto"
+                  unoptimized
+                />
+                <span className="font-semibold text-slate-900">{program.name}</span>
+              </div>
+              <p className="flex-1 text-sm text-slate-500">{program.description}</p>
+              <StartScreeningButton
+                label="Check eligibility →"
+                className="shrink-0 rounded-full border border-teal-700 px-4 py-1.5 text-xs font-semibold text-teal-700 transition hover:bg-teal-700 hover:text-white"
+              />
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="mx-auto w-full max-w-5xl px-6 pb-24">
@@ -150,7 +208,12 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative mx-auto mt-12 mb-2 hidden h-2 w-full max-w-4xl rounded-full bg-slate-200 lg:block">
+            <div className="h-full w-full rounded-full bg-gradient-to-r from-amber-300 via-amber-400 to-teal-600" />
+            <span className="guide-sphere absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full animate-progress-glide" />
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:mt-8 lg:grid-cols-4">
             {STEPS.map((step, i) => (
               <div
                 key={step.title}
@@ -227,15 +290,21 @@ export default function HomePage() {
       </section>
 
       <section className="py-24">
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6 rounded-2xl bg-teal-700 px-8 py-16 text-center">
-          <h2 className="text-3xl font-semibold text-white sm:text-4xl">
-            See what you qualify for.
-          </h2>
-          <p className="max-w-xl text-teal-50">
-            No account, no auth, no personal data required to try the full demo.
-          </p>
+        <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-10 rounded-2xl bg-teal-700 px-8 py-16 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div>
+            <h2 className="text-3xl font-semibold text-white sm:text-4xl">
+              Ready to find every
+              <br />
+              dollar you&apos;re owed?
+            </h2>
+            <p className="mt-3 max-w-md text-teal-50">
+              No account, no auth, no personal data required to try the full demo.
+            </p>
+          </div>
+
           <StartScreeningButton
-            className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-teal-800 shadow-sm transition hover:bg-teal-50"
+            label="Check what I qualify for"
+            className="guide-sphere animate-sphere-float mx-auto flex h-40 w-40 shrink-0 items-center justify-center rounded-full px-6 text-center text-sm leading-tight font-semibold text-white shadow-2xl transition hover:scale-105 sm:h-44 sm:w-44"
           />
         </div>
       </section>

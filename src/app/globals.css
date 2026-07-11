@@ -48,3 +48,38 @@ body {
   background-image: radial-gradient(currentColor 1.5px, transparent 1.5px);
   background-size: 14px 14px;
 }
+
+.guide-sphere {
+  background: radial-gradient(circle at 32% 28%, #5eead4 0%, #0f766e 55%, #042f2b 100%);
+  box-shadow:
+    0 16px 32px -8px rgba(15, 118, 110, 0.45),
+    inset 0 2px 6px rgba(255, 255, 255, 0.35);
+}
+
+@keyframes sphere-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-sphere-float {
+  animation: sphere-float 4s ease-in-out infinite;
+}
+
+@keyframes progress-glide {
+  0%,
+  100% {
+    left: 1%;
+  }
+  50% {
+    left: 94%;
+  }
+}
+
+.animate-progress-glide {
+  animation: progress-glide 6s ease-in-out infinite;
+}
