@@ -37,3 +37,31 @@ services:
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         scope: RUN_AND_BUILD_TIME
         value: "REPLACED_AT_DEPLOY_TIME"
+      - key: APPLY_ENCRYPTION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "REPLACED_AT_DEPLOY_TIME"
+workers:
+  - name: apply-worker
+    github:
+      repo: ben564885/benefy
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: worker/Dockerfile
+    source_dir: worker
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: SUPABASE_URL
+        scope: RUN_TIME
+        value: "REPLACED_AT_DEPLOY_TIME"
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "REPLACED_AT_DEPLOY_TIME"
+      # Must be the same value as the web service's APPLY_ENCRYPTION_KEY
+      # above — this worker decrypts SSNs the web app encrypted.
+      - key: APPLY_ENCRYPTION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "REPLACED_AT_DEPLOY_TIME"

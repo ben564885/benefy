@@ -1,7 +1,16 @@
 import { randomUUID } from "crypto";
 import { screenClient } from "@/lib/engine";
 import { supabase } from "@/lib/supabase";
-import type { ChatMessage, ClientProfile, ClientRecord, TraceStep } from "@/lib/types";
+import { EMPTY_APPLICATION_PROFILE } from "@/lib/types";
+import type {
+  ChatMessage,
+  ClientProfile,
+  ClientRecord,
+  Consent,
+  Submission,
+  SubmissionStatus,
+  TraceStep,
+} from "@/lib/types";
 
 // Supabase-backed persistence (see supabase/schema.sql). One row per
 // screening session; chat_history / trace / last_screening are jsonb blobs
@@ -27,6 +36,7 @@ export interface ClientRow {
   chat_history: ChatMessage[];
   trace: TraceStep[];
   user_id: string | null;
+  application_profile: ClientProfile["application_profile"];
 }
 
 // supabase-js's generic Database inference collapses to `never` for
@@ -57,6 +67,7 @@ function rowToRecord(row: ClientRow): ClientRecord {
     field_status,
     last_screened_at,
     last_screening,
+    application_profile,
   } = row;
   const profile: ClientProfile = {
     client_id,
@@ -74,6 +85,7 @@ function rowToRecord(row: ClientRow): ClientRecord {
     intake_notes,
     field_status,
     last_screened_at,
+    application_profile: application_profile ?? EMPTY_APPLICATION_PROFILE,
   };
   return { profile, last_screening };
 }
@@ -97,6 +109,7 @@ function profileToRow(
     intake_notes: profile.intake_notes,
     field_status: profile.field_status,
     last_screened_at: profile.last_screened_at,
+    application_profile: profile.application_profile,
   };
 }
 
@@ -199,4 +212,86 @@ export async function setTrace(clientId: string, trace: TraceStep[]): Promise<vo
 
 export function nextClientId(): string {
   return `c_${randomUUID().slice(0, 8)}`;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function submissionsTable(): any {
+  return supabase().from("submissions");
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function consentsTable(): any {
+  return supabase().from("consents");
+}
+
+export async function updateApplicationProfile(
+  clientId: string,
+  patch: Partial<ClientProfile["application_profile"]>,
+): Promise<ClientRecord | undefined> {
+  const existing = await getClient(clientId);
+  if (!existing) return undefined;
+  const merged = { ...existing.profile.application_profile, ...patch };
+  const { data, error } = await clientsTable()
+    .update({ application_profile: merged })
+    .eq("client_id", clientId)
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToRecord(data as unknown as ClientRow) : undefined;
+}
+
+export async function recordConsent(
+  clientId: string,
+  programIds: string[],
+  consentTextVersion: string,
+): Promise<Consent> {
+  const { data, error } = await consentsTable()
+    .insert({ client_id: clientId, program_ids: programIds, consent_text_version: consentTextVersion })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Consent;
+}
+
+// Enqueues one submission row per program. Called only after recordConsent()
+// — every row's consent_id is a real FK, so "what did the user actually
+// authorize" is always answerable from the submissions table alone.
+export async function enqueueSubmissions(
+  clientId: string,
+  programs: { program_id: string; apply_mode: Submission["apply_mode"] }[],
+  consentId: string,
+): Promise<Submission[]> {
+  const rows = programs.map((p) => ({
+    client_id: clientId,
+    program_id: p.program_id,
+    apply_mode: p.apply_mode,
+    consent_id: consentId,
+  }));
+  const { data, error } = await submissionsTable().insert(rows).select("*");
+  if (error) throw error;
+  return data as Submission[];
+}
+
+export async function listSubmissionsForClient(clientId: string): Promise<Submission[]> {
+  const { data, error } = await submissionsTable()
+    .select("*")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data as Submission[];
+}
+
+// The one status transition the web app itself performs: the user reviewing
+// an "awaiting_review" dry-run and tapping Confirm. Every other transition
+// belongs to the worker (worker/src/queue.ts).
+export async function confirmSubmission(clientId: string, submissionId: string): Promise<Submission | undefined> {
+  const { data, error } = await submissionsTable()
+    .update({ status: "submitting" satisfies SubmissionStatus, updated_at: new Date().toISOString() })
+    .eq("id", submissionId)
+    .eq("client_id", clientId)
+    .eq("status", "awaiting_review")
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? undefined;
 }

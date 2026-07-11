@@ -74,8 +74,9 @@ export default async function ApplicationPage({
           )}
 
           <p className="text-xs text-slate-400">
-            Generated {new Date(outcome.data.generated_at).toLocaleString()} · This is a draft pre-fill only. Benefy
-            does not submit applications electronically — you must review and submit through the official channel
+            Generated {new Date(outcome.data.generated_at).toLocaleString()} · This is a draft pre-fill. For programs
+            supporting automatic apply, use the &quot;Apply automatically&quot; panel on your results page — you
+            always review a filled draft before anything is sent. Otherwise, submit through the official channel
             above.
           </p>
         </div>

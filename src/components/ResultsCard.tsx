@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import AgentMarkdown from "@/components/AgentMarkdown";
+import ApplyPanel from "@/components/ApplyPanel";
 import ProgramCard from "@/components/ProgramCard";
 import TraceView from "@/components/TraceView";
 
@@ -46,7 +47,7 @@ export default function ResultsCard({
   const ineligibleResults = screening.results.filter((r) => r.status === "likely_ineligible");
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col gap-4">
       <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 p-6 text-center">
         <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Estimated benefits surfaced</p>
         <p className="mt-1 text-4xl font-bold text-emerald-800">
@@ -81,6 +82,8 @@ export default function ResultsCard({
           </div>
         ))}
       </div>
+
+      <ApplyPanel clientId={clientId} screening={screening} programs={programs} />
 
       {ineligibleResults.length > 0 && (
         <div>

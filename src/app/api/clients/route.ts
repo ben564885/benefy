@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthedUser } from "@/lib/auth";
 import { createClient, listClientsForUser, nextClientId } from "@/lib/store";
+import { EMPTY_APPLICATION_PROFILE } from "@/lib/types";
 import type { ClientProfile } from "@/lib/types";
 
 export async function GET() {
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
     intake_notes: "",
     field_status: {},
     last_screened_at: null,
+    application_profile: EMPTY_APPLICATION_PROFILE,
   };
   const record = await createClient(profile, user.id);
   return NextResponse.json({ client: record }, { status: 201 });
