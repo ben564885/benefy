@@ -72,7 +72,7 @@ function IncomeQuickInput({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+    <form onSubmit={submit} className="flex flex-wrap items-center justify-center gap-2">
       <span className="text-sm font-semibold text-slate-600">$</span>
       <input
         type="number"
@@ -308,14 +308,14 @@ export default function ChatPanel({
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 pt-4">
         {activeField && !sendingGuided && (
-          <div className="flex flex-col gap-2">
-            <span className="pl-1 text-xs font-medium text-slate-400">
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-xs font-medium text-slate-400">
               {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
             </span>
             {activeField === "monthly_income_gross" ? (
               <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
             ) : (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 {t.chips[activeField].map((chip) => (
                   <button
                     key={chip.value}
