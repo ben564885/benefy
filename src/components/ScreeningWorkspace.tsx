@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ChatMessage, ClientProfile, ClientRecord, ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import ChatPanel from "@/components/ChatPanel";
 import ProfilePanel from "@/components/ProfilePanel";
+import RealtimeVoiceIntake from "@/components/RealtimeVoiceIntake";
 import ResultsView from "@/components/ResultsView";
 
 interface Props {
@@ -33,8 +34,18 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
   const [mode, setMode] = useState<"live_gradient_agent" | "live_inference" | "local_fallback" | null>(null);
   const [tab, setTab] = useState<"intake" | "results">(screening ? "results" : "intake");
   const [screening_loading, setScreeningLoading] = useState(false);
+  const [intakeMode, setIntakeMode] = useState<"text" | "voice">("text");
 
   const readyToScreen = isReadyToScreen(profile);
+
+  async function refreshRecord() {
+    const res = await fetch(`/api/clients/${clientId}`);
+    const data = await res.json();
+    if (!res.ok) return;
+    setProfile(data.client.profile);
+    setScreening(data.client.last_screening);
+    if (data.trace) setTrace(data.trace);
+  }
 
   async function handleSend(message: string) {
     const res = await fetch(`/api/clients/${clientId}/intake`, {
@@ -115,7 +126,31 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
 
       {tab === "intake" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-          <ChatPanel messages={chat} onSend={handleSend} />
+          <div className="flex flex-col gap-3">
+            <div className="flex w-fit gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 text-sm">
+              <button
+                onClick={() => setIntakeMode("text")}
+                className={`rounded-md px-3 py-1.5 font-medium transition ${
+                  intakeMode === "text" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                Text
+              </button>
+              <button
+                onClick={() => setIntakeMode("voice")}
+                className={`rounded-md px-3 py-1.5 font-medium transition ${
+                  intakeMode === "voice" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                Voice (beta)
+              </button>
+            </div>
+            {intakeMode === "text" ? (
+              <ChatPanel messages={chat} onSend={handleSend} />
+            ) : (
+              <RealtimeVoiceIntake clientId={clientId} onProfileUpdated={refreshRecord} />
+            )}
+          </div>
           <div className="flex flex-col gap-4">
             <ProfilePanel profile={profile} readyToScreen={readyToScreen} />
             <button

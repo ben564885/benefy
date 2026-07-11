@@ -29,8 +29,8 @@ export interface PrefillData {
 
 export type PrefillOutcome = { ok: true; data: PrefillData } | { ok: false; error: string };
 
-export function buildPrefill(clientId: string, programId: string): PrefillOutcome {
-  const record = getClient(clientId);
+export async function buildPrefill(clientId: string, programId: string): Promise<PrefillOutcome> {
+  const record = await getClient(clientId);
   if (!record) return { ok: false, error: "Screening session not found" };
 
   const program = getProgram(programId);

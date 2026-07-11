@@ -50,7 +50,7 @@ function buildFollowUpReply(profile: ClientProfile, patch: Partial<ClientProfile
   return parts.join(" ");
 }
 
-const INTAKE_SYSTEM_PROMPT = `You are the Intake Agent for Benefy, a benefits-screening tool used directly by San Francisco residents to screen themselves for benefits. Your job is to turn a person's free-text description of their own household into a structured profile by calling functions. You are never the source of truth for eligibility — only the check_eligibility function's result is.
+export const INTAKE_SYSTEM_PROMPT = `You are the Intake Agent for Benefy, a benefits-screening tool used directly by San Francisco residents to screen themselves for benefits. Your job is to turn a person's free-text description of their own household into a structured profile by calling functions. You are never the source of truth for eligibility — only the check_eligibility function's result is.
 
 Rules you always follow:
 1. You never state that the user is, might be, or is not eligible for any benefit program under any circumstance, unless you have called check_eligibility in this conversation and are reporting exactly what it returned.
@@ -87,7 +87,7 @@ export async function runIntakeTurn(
         { role: "user", content: `[client_id: ${clientId}]\n${userText}` },
       ]);
       if (res.content) {
-        const current = getClient(clientId)?.profile ?? profile;
+        const current = (await getClient(clientId))?.profile ?? profile;
         return {
           patch: {},
           assistant_reply: res.content,
@@ -119,9 +119,9 @@ export async function runIntakeTurn(
         userText,
         [UPDATE_PROFILE_TOOL, CHECK_ELIGIBILITY_TOOL],
         {
-          update_client_profile: (args) => {
+          update_client_profile: async (args) => {
             const patch = args as Partial<ClientProfile>;
-            const updated = updateProfile(clientId, patch);
+            const updated = await updateProfile(clientId, patch);
             trace.push({
               step: "tool_call_update_client_profile",
               actor: "function",
@@ -130,8 +130,8 @@ export async function runIntakeTurn(
             });
             return { ok: true, profile: updated?.profile };
           },
-          check_eligibility: () => {
-            const updated = screenAndStore(clientId);
+          check_eligibility: async () => {
+            const updated = await screenAndStore(clientId);
             if (!updated || !updated.last_screening) return { error: "client not found" };
             trace.push({
               step: "tool_call_check_eligibility",
@@ -144,7 +144,7 @@ export async function runIntakeTurn(
         },
       );
 
-      const current = getClient(clientId)?.profile ?? profile;
+      const current = (await getClient(clientId))?.profile ?? profile;
       trace.push({
         step: "intake_live_inference_reply",
         actor: "intake_agent",

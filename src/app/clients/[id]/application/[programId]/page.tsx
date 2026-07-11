@@ -12,10 +12,10 @@ export default async function ApplicationPage({
   params: Promise<{ id: string; programId: string }>;
 }) {
   const { id, programId } = await params;
-  const record = getClient(id);
+  const record = await getClient(id);
   if (!record) notFound();
 
-  const outcome = buildPrefill(id, programId);
+  const outcome = await buildPrefill(id, programId);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-10">

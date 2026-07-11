@@ -20,3 +20,14 @@ services:
         scope: RUN_TIME
         type: SECRET
         value: "REPLACED_AT_DEPLOY_TIME"
+      - key: SUPABASE_URL
+        scope: RUN_TIME
+        value: "REPLACED_AT_DEPLOY_TIME"
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "REPLACED_AT_DEPLOY_TIME"
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "REPLACED_AT_DEPLOY_TIME"

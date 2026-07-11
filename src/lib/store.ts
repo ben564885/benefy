@@ -1,85 +1,193 @@
+import { randomUUID } from "crypto";
 import { screenClient } from "@/lib/engine";
+import { supabase } from "@/lib/supabase";
 import type { ChatMessage, ClientProfile, ClientRecord, TraceStep } from "@/lib/types";
 
-interface Store {
-  clients: Map<string, ClientRecord>;
-  chatHistory: Map<string, ChatMessage[]>;
-  traces: Map<string, TraceStep[]>;
+// Supabase-backed persistence (see supabase/schema.sql). One row per
+// screening session; chat_history / trace / last_screening are jsonb blobs
+// replaced wholesale, mirroring the old in-memory Map shape 1:1 so callers
+// didn't need to change beyond adding `await`.
+export interface ClientRow {
+  client_id: string;
+  display_name: string;
+  household_size: number | null;
+  monthly_income_gross: number | null;
+  annual_income_gross: number | null;
+  member_ages: number[];
+  has_senior: boolean | null;
+  has_disability: boolean | null;
+  immigration_status: string | null;
+  sf_resident: boolean | null;
+  zip_code: string | null;
+  current_programs: string[];
+  intake_notes: string;
+  field_status: Record<string, ClientProfile["field_status"][string]>;
+  last_screened_at: string | null;
+  last_screening: ClientRecord["last_screening"];
+  chat_history: ChatMessage[];
+  trace: TraceStep[];
 }
 
-// Module-level in-memory store. Survives across requests within one server
-// process (this is a demo app: no auth, no persistence beyond process lifetime,
-// per spec §9 "In-memory or SQLite/JSON storage — no auth").
-// Stashed on globalThis so Next.js dev-mode hot reload doesn't wipe active sessions.
-const globalForStore = globalThis as unknown as { __benefyStore?: Store };
-
-function emptyStore(): Store {
-  return { clients: new Map(), chatHistory: new Map(), traces: new Map() };
+// supabase-js's generic Database inference collapses to `never` for
+// insert/update payloads when the client is created without an explicit
+// generated schema type (no CLI/db link here — see src/lib/supabase.ts).
+// One cast in one place, instead of `as any` scattered through every call;
+// result shapes are still verified manually via ClientRow below.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function clientsTable(): any {
+  return supabase().from("clients");
 }
 
-const store = globalForStore.__benefyStore ?? emptyStore();
-globalForStore.__benefyStore = store;
-
-export function listClients(): ClientRecord[] {
-  return Array.from(store.clients.values());
+function rowToRecord(row: ClientRow): ClientRecord {
+  const {
+    client_id,
+    display_name,
+    household_size,
+    monthly_income_gross,
+    annual_income_gross,
+    member_ages,
+    has_senior,
+    has_disability,
+    immigration_status,
+    sf_resident,
+    zip_code,
+    current_programs,
+    intake_notes,
+    field_status,
+    last_screened_at,
+    last_screening,
+  } = row;
+  const profile: ClientProfile = {
+    client_id,
+    display_name,
+    household_size,
+    monthly_income_gross,
+    annual_income_gross,
+    member_ages,
+    has_senior,
+    has_disability,
+    immigration_status: immigration_status as ClientProfile["immigration_status"],
+    sf_resident,
+    zip_code,
+    current_programs,
+    intake_notes,
+    field_status,
+    last_screened_at,
+  };
+  return { profile, last_screening };
 }
 
-export function getClient(clientId: string): ClientRecord | undefined {
-  return store.clients.get(clientId);
+function profileToRow(profile: ClientProfile): Omit<ClientRow, "last_screening" | "chat_history" | "trace"> {
+  return {
+    client_id: profile.client_id,
+    display_name: profile.display_name,
+    household_size: profile.household_size,
+    monthly_income_gross: profile.monthly_income_gross,
+    annual_income_gross: profile.annual_income_gross,
+    member_ages: profile.member_ages,
+    has_senior: profile.has_senior,
+    has_disability: profile.has_disability,
+    immigration_status: profile.immigration_status,
+    sf_resident: profile.sf_resident,
+    zip_code: profile.zip_code,
+    current_programs: profile.current_programs,
+    intake_notes: profile.intake_notes,
+    field_status: profile.field_status,
+    last_screened_at: profile.last_screened_at,
+  };
 }
 
-export function createClient(profile: ClientProfile): ClientRecord {
-  const record: ClientRecord = { profile, last_screening: null };
-  store.clients.set(profile.client_id, record);
-  return record;
+export async function listClients(): Promise<ClientRecord[]> {
+  const { data, error } = await clientsTable()
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data as unknown as ClientRow[]).map(rowToRecord);
 }
 
-export function updateProfile(
+export async function getClient(clientId: string): Promise<ClientRecord | undefined> {
+  const { data, error } = await clientsTable()
+    .select("*")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToRecord(data as unknown as ClientRow) : undefined;
+}
+
+export async function createClient(profile: ClientProfile): Promise<ClientRecord> {
+  const { data, error } = await clientsTable()
+    .insert({ ...profileToRow(profile), last_screening: null, chat_history: [], trace: [] })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return rowToRecord(data as unknown as ClientRow);
+}
+
+export async function updateProfile(
   clientId: string,
   patch: Partial<ClientProfile>,
-): ClientRecord | undefined {
-  const record = store.clients.get(clientId);
-  if (!record) return undefined;
-  record.profile = { ...record.profile, ...patch };
-  store.clients.set(clientId, record);
-  return record;
+): Promise<ClientRecord | undefined> {
+  const existing = await getClient(clientId);
+  if (!existing) return undefined;
+  const merged = { ...existing.profile, ...patch };
+  const { data, error } = await clientsTable()
+    .update(profileToRow(merged))
+    .eq("client_id", clientId)
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToRecord(data as unknown as ClientRow) : undefined;
 }
 
-export function screenAndStore(clientId: string): ClientRecord | undefined {
-  const record = store.clients.get(clientId);
-  if (!record) return undefined;
-  const screening = screenClient(record.profile);
-  record.last_screening = screening;
-  record.profile = { ...record.profile, last_screened_at: screening.screened_at };
-  store.clients.set(clientId, record);
-  return record;
+export async function screenAndStore(clientId: string): Promise<ClientRecord | undefined> {
+  const existing = await getClient(clientId);
+  if (!existing) return undefined;
+  const screening = screenClient(existing.profile);
+  const { data, error } = await clientsTable()
+    .update({ last_screening: screening, last_screened_at: screening.screened_at })
+    .eq("client_id", clientId)
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToRecord(data as unknown as ClientRow) : undefined;
 }
 
-export function getChatHistory(clientId: string): ChatMessage[] {
-  return store.chatHistory.get(clientId) ?? [];
+export async function getChatHistory(clientId: string): Promise<ChatMessage[]> {
+  const { data, error } = await clientsTable()
+    .select("chat_history")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.chat_history as ChatMessage[] | undefined) ?? [];
 }
 
-export function appendChatMessages(clientId: string, messages: ChatMessage[]): void {
-  const existing = store.chatHistory.get(clientId) ?? [];
-  store.chatHistory.set(clientId, [...existing, ...messages]);
+export async function appendChatMessages(clientId: string, messages: ChatMessage[]): Promise<void> {
+  const existing = await getChatHistory(clientId);
+  const { error } = await clientsTable()
+    .update({ chat_history: [...existing, ...messages] })
+    .eq("client_id", clientId);
+  if (error) throw error;
 }
 
-export function getTrace(clientId: string): TraceStep[] {
-  return store.traces.get(clientId) ?? [];
+export async function getTrace(clientId: string): Promise<TraceStep[]> {
+  const { data, error } = await clientsTable()
+    .select("trace")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.trace as TraceStep[] | undefined) ?? [];
 }
 
-export function setTrace(clientId: string, trace: TraceStep[]): void {
-  store.traces.set(clientId, trace);
+export async function setTrace(clientId: string, trace: TraceStep[]): Promise<void> {
+  const { error } = await clientsTable().update({ trace }).eq("client_id", clientId);
+  if (error) throw error;
 }
 
-export function caseloadTotal(): number {
-  return listClients().reduce(
-    (sum, r) => sum + (r.last_screening?.total_estimated_annual_value ?? 0),
-    0,
-  );
+export async function caseloadTotal(): Promise<number> {
+  const clients = await listClients();
+  return clients.reduce((sum, r) => sum + (r.last_screening?.total_estimated_annual_value ?? 0), 0);
 }
 
 export function nextClientId(): string {
-  const n = store.clients.size + 1;
-  return `c_${String(n).padStart(3, "0")}`;
+  return `c_${randomUUID().slice(0, 8)}`;
 }

@@ -6,7 +6,7 @@ export async function GET(
   context: { params: Promise<{ id: string; programId: string }> },
 ) {
   const { id, programId } = await context.params;
-  const outcome = buildPrefill(id, programId);
+  const outcome = await buildPrefill(id, programId);
   if (!outcome.ok) {
     const status = outcome.error === "Client not found" || outcome.error === "Program not found" ? 404 : 400;
     return NextResponse.json({ error: outcome.error }, { status });

@@ -13,7 +13,7 @@ import type { ChatMessage, TraceStep } from "@/lib/types";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const record = getClient(id);
+  const record = await getClient(id);
   if (!record) {
     return NextResponse.json({ error: "Client not found" }, { status: 404 });
   }
@@ -24,7 +24,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
-  const trace: TraceStep[] = getTrace(id);
+  const trace: TraceStep[] = await getTrace(id);
   const target = routeTurn(message, record.last_screening != null);
   trace.push({
     step: "router_decision",
@@ -42,8 +42,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       content: explanation.text,
       timestamp: new Date().toISOString(),
     };
-    appendChatMessages(id, [userMessage, assistantMessage]);
-    setTrace(id, trace);
+    await appendChatMessages(id, [userMessage, assistantMessage]);
+    await setTrace(id, trace);
     return NextResponse.json({
       target,
       assistant_reply: explanation.text,
@@ -56,14 +56,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   const intakeResult = await runIntakeTurn(message, id, record.profile, trace);
-  const updated = updateProfile(id, intakeResult.patch);
+  const updated = await updateProfile(id, intakeResult.patch);
   const assistantMessage: ChatMessage = {
     role: "assistant",
     content: intakeResult.assistant_reply,
     timestamp: new Date().toISOString(),
   };
-  appendChatMessages(id, [userMessage, assistantMessage]);
-  setTrace(id, trace);
+  await appendChatMessages(id, [userMessage, assistantMessage]);
+  await setTrace(id, trace);
 
   return NextResponse.json({
     target: "intake",

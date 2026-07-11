@@ -6,12 +6,12 @@ import type { TraceStep } from "@/lib/types";
 
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const record = getClient(id);
+  const record = await getClient(id);
   if (!record) {
     return NextResponse.json({ error: "Client not found" }, { status: 404 });
   }
 
-  const trace: TraceStep[] = getTrace(id);
+  const trace: TraceStep[] = await getTrace(id);
   trace.push({
     step: "function_call_check_eligibility",
     actor: "function",
@@ -23,7 +23,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   // Run the deterministic engine directly (this IS what the check_eligibility
   // Gradient tool calls under the hood — see lib/gradient/tools.ts).
   const directResult = executeCheckEligibility(record.profile);
-  const updated = screenAndStore(id);
+  const updated = await screenAndStore(id);
   if (!updated || !updated.last_screening) {
     return NextResponse.json({ error: "Screening failed" }, { status: 500 });
   }
@@ -42,7 +42,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     detail: "Navigator agent explained the function's result to the user; it did not compute eligibility itself.",
     timestamp: new Date().toISOString(),
   });
-  setTrace(id, trace);
+  await setTrace(id, trace);
 
   return NextResponse.json({
     client: updated,

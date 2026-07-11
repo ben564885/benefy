@@ -1,27 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import HeroCollage from "@/components/landing/HeroCollage";
-import MarqueeRow from "@/components/landing/MarqueeRow";
 import IntakeMockup from "@/components/landing/IntakeMockup";
 import StartScreeningButton from "@/components/StartScreeningButton";
-
-const ROW_ONE = [
-  "CalFresh",
-  "PG&E CARE",
-  "SFMTA Lifeline",
-  "Deterministic eligibility engine",
-  "Gradient AI intake agent",
-  "Human-in-the-loop review",
-];
-
-const ROW_TWO = [
-  "Pre-filled applications",
-  "2026 FPL & AMI tables",
-  "Navigator agent",
-  "Guardrails on every response",
-  "Full eligibility trace",
-  "Zero guesswork",
-];
 
 const PROGRAM_TABLE = [
   {
@@ -94,33 +74,15 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className="relative mx-auto w-full max-w-6xl overflow-hidden px-6 pt-8 pb-20 sm:pt-12">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-8">
+      <section className="mx-auto w-full max-w-6xl px-6 pt-8 pb-20 sm:pt-12">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
-            <div className="mb-5 flex flex-col gap-1 text-teal-600">
-              <div className="flex gap-1.5">
-                <span>▸</span>
-                <span>▸</span>
-                <span>▸</span>
-              </div>
-              <div className="flex gap-1.5 opacity-40">
-                <span>▸</span>
-                <span>▸</span>
-                <span>▸</span>
-              </div>
-            </div>
-
-            <div className="mb-6 inline-flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">
-              <span className="h-px w-8 bg-slate-300" />
+            <p className="mb-5 text-xs font-medium uppercase tracking-wide text-slate-400">
               Built for San Francisco residents
-            </div>
+            </p>
 
-            <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl md:text-7xl">
-              Find every
-              <br />
-              dollar you
-              <br />
-              <span className="text-teal-700">qualify for.</span>
+            <h1 className="text-5xl font-semibold tracking-tight text-slate-900 sm:text-6xl">
+              Find every dollar you <span className="text-teal-700">qualify for.</span>
             </h1>
 
             <p className="mt-6 max-w-md text-base text-slate-500 sm:text-lg">
@@ -132,31 +94,22 @@ export default function HomePage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <StartScreeningButton
-                className="rounded-full bg-teal-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800"
+                className="rounded-lg bg-teal-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-800"
               />
               <a
                 href="#how-it-works"
-                className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                className="rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
               >
                 See how it works
               </a>
             </div>
           </div>
 
-          <HeroCollage />
+          <IntakeMockup />
         </div>
-
-        <div className="bg-dot-grid absolute -bottom-4 -left-4 hidden h-16 w-16 -rotate-6 text-teal-200 opacity-70 lg:block" />
       </section>
 
-      <section className="flex flex-col gap-3 pb-16">
-        <MarqueeRow items={ROW_ONE} direction="left" />
-        <MarqueeRow items={ROW_TWO} direction="right" />
-      </section>
-
-      <section id="programs" className="relative mx-auto w-full max-w-4xl px-6 pb-24">
-        <span className="guide-sphere animate-sphere-float absolute -top-6 right-8 hidden h-14 w-14 rounded-full sm:block" />
-
+      <section id="programs" className="mx-auto w-full max-w-4xl px-6 pb-24">
         <div className="mb-10 text-center">
           <p className="text-sm font-medium uppercase tracking-wide text-teal-700">Programs</p>
           <h2 className="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
@@ -193,10 +146,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-5xl px-6 pb-24">
-        <IntakeMockup />
-      </section>
-
       <section id="how-it-works" className="border-t border-slate-100 bg-slate-50 py-24">
         <div className="mx-auto w-full max-w-6xl px-6">
           <div className="mx-auto max-w-2xl text-center">
@@ -208,12 +157,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="relative mx-auto mt-12 mb-2 hidden h-2 w-full max-w-4xl rounded-full bg-slate-200 lg:block">
-            <div className="h-full w-full rounded-full bg-gradient-to-r from-amber-300 via-amber-400 to-teal-600" />
-            <span className="guide-sphere absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full animate-progress-glide" />
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:mt-8 lg:grid-cols-4">
+          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, i) => (
               <div
                 key={step.title}
@@ -290,7 +234,7 @@ export default function HomePage() {
       </section>
 
       <section className="py-24">
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-10 rounded-2xl bg-teal-700 px-8 py-16 text-center sm:flex-row sm:justify-between sm:text-left">
+        <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-8 rounded-2xl bg-teal-700 px-8 py-16 text-center sm:flex-row sm:justify-between sm:text-left">
           <div>
             <h2 className="text-3xl font-semibold text-white sm:text-4xl">
               Ready to find every
@@ -304,7 +248,7 @@ export default function HomePage() {
 
           <StartScreeningButton
             label="Check what I qualify for"
-            className="guide-sphere animate-sphere-float mx-auto flex h-40 w-40 shrink-0 items-center justify-center rounded-full px-6 text-center text-sm leading-tight font-semibold text-white shadow-2xl transition hover:scale-105 sm:h-44 sm:w-44"
+            className="shrink-0 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-teal-800 transition hover:bg-teal-50"
           />
         </div>
       </section>

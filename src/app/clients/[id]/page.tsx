@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const record = getClient(id);
+  const record = await getClient(id);
   if (!record) notFound();
 
   return (
@@ -26,8 +26,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <ScreeningWorkspace
         clientId={id}
         initialRecord={record}
-        initialChat={getChatHistory(id)}
-        initialTrace={getTrace(id)}
+        initialChat={await getChatHistory(id)}
+        initialTrace={await getTrace(id)}
         programs={getAllPrograms()}
       />
     </main>

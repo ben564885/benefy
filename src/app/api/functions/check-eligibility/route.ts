@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "client_id is required" }, { status: 400 });
   }
 
-  const updated = screenAndStore(clientId);
+  const updated = await screenAndStore(clientId);
   if (!updated || !updated.last_screening) {
     return NextResponse.json({ error: "Client not found" }, { status: 404 });
   }

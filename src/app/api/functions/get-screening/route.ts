@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "client_id is required" }, { status: 400 });
   }
 
-  const record = getClient(clientId);
+  const record = await getClient(clientId);
   if (!record || !record.last_screening) {
     return NextResponse.json({ screened: false });
   }

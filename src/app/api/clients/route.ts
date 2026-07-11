@@ -3,10 +3,10 @@ import { caseloadTotal, createClient, listClients, nextClientId } from "@/lib/st
 import type { ClientProfile } from "@/lib/types";
 
 export async function GET() {
-  const clients = listClients();
+  const clients = await listClients();
   return NextResponse.json({
     clients,
-    caseload_total_annual_value: caseloadTotal(),
+    caseload_total_annual_value: await caseloadTotal(),
   });
 }
 
@@ -30,6 +30,6 @@ export async function POST(request: Request) {
     field_status: {},
     last_screened_at: null,
   };
-  const record = createClient(profile);
+  const record = await createClient(profile);
   return NextResponse.json({ client: record }, { status: 201 });
 }

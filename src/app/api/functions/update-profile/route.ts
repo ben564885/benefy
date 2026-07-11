@@ -34,9 +34,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "client_id is required" }, { status: 400 });
   }
 
-  let record = getClient(clientId);
+  let record = await getClient(clientId);
   if (!record) {
-    record = createClient({
+    record = await createClient({
       client_id: clientId,
       display_name: body.display_name || clientId,
       household_size: null,
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     patch.current_programs = body.current_programs_csv.split(",").map((s: string) => s.trim());
   }
 
-  const updated = updateProfile(clientId, patch);
+  const updated = await updateProfile(clientId, patch);
   const profile = updated!.profile;
   const missing = missingRequired(profile);
 

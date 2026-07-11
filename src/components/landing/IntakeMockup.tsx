@@ -1,6 +1,6 @@
 export default function IntakeMockup() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
         <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />

@@ -179,8 +179,8 @@ export async function explainScreening(
         userPrompt,
         [GET_SCREENING_TOOL],
         {
-          get_screening_result: () => {
-            const record = getClient(clientId);
+          get_screening_result: async () => {
+            const record = await getClient(clientId);
             trace.push({
               step: "tool_call_get_screening_result",
               actor: "function",
