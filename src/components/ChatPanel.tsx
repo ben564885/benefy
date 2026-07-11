@@ -215,7 +215,7 @@ export default function ChatPanel({
         )}
       </div>
 
-      <div className="sticky bottom-0 flex flex-col gap-3 bg-gradient-to-t from-white via-white/95 to-transparent pt-4">
+      <div className="sticky bottom-0 flex flex-col gap-3 pt-4">
         {activeField && (
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-slate-400">
