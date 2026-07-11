@@ -171,20 +171,22 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
   const hasTransUnionProgram = Array.from(selected).includes("sfpuc_cap");
 
   return (
-    <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-5">
-      <div className="flex items-center justify-between gap-3">
+    <div className="rounded-2xl border-2 border-teal-300 bg-teal-50 p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Apply automatically</h3>
-          <p className="text-xs text-slate-600">
-            {automatable.length} of your likely-eligible programs can be filled out for you — you review before
-            anything is sent.
+          <h3 className="font-display text-xl font-semibold text-slate-900">
+            Let Benefy apply for you
+          </h3>
+          <p className="mt-1 text-sm text-slate-600">
+            We&apos;ll fill out {automatable.length} of your likely-eligible{" "}
+            {automatable.length === 1 ? "application" : "applications"} — you review before anything is sent.
           </p>
         </div>
         <button
           onClick={togglePanel}
-          className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-teal-800"
+          className="shrink-0 rounded-full bg-teal-700 px-6 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-teal-800"
         >
-          {open ? "Close" : "Start"}
+          {open ? "Close" : "Apply automatically →"}
         </button>
       </div>
 

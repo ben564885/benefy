@@ -85,7 +85,7 @@ export default function ProgramCard({ result, programName, clientId }: Props) {
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button
           onClick={toggleApply}
-          className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-teal-800"
+          className="rounded-lg border border-slate-300 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-teal-400 hover:text-teal-800"
         >
           {applyOpen ? "Hide application" : "See application details"}
         </button>

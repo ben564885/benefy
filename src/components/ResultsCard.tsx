@@ -54,6 +54,8 @@ export default function ResultsCard({ clientId, screening, programs, trace, onRe
         )}
       </div>
 
+      <ApplyPanel clientId={clientId} screening={screening} programs={programs} />
+
       <div className="results-carousel -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3">
         {shownResults.map((r, i) => (
           <div
@@ -69,8 +71,6 @@ export default function ResultsCard({ clientId, screening, programs, trace, onRe
           </div>
         ))}
       </div>
-
-      <ApplyPanel clientId={clientId} screening={screening} programs={programs} />
 
       {ineligibleResults.length > 0 && (
         <div>

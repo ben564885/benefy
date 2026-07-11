@@ -115,6 +115,35 @@ function IncomeQuickInput({
   );
 }
 
+// Types an assistant message out character-by-character on first appearance,
+// then hands off to the markdown renderer once complete. `animate` is false for
+// messages restored from history so a reload doesn't retype the whole thread.
+function AssistantBubble({ text, animate }: { text: string; animate: boolean }) {
+  const [shown, setShown] = useState(animate ? 0 : text.length);
+
+  useEffect(() => {
+    if (!animate) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const id = window.setTimeout(() => setShown(text.length), 0);
+      return () => window.clearTimeout(id);
+    }
+    const id = window.setInterval(() => {
+      setShown((n) => {
+        const next = n + 2;
+        if (next >= text.length) {
+          window.clearInterval(id);
+          return text.length;
+        }
+        return next;
+      });
+    }, 12);
+    return () => window.clearInterval(id);
+  }, [text, animate]);
+
+  if (shown >= text.length) return <AgentMarkdown>{text}</AgentMarkdown>;
+  return <span className="whitespace-pre-wrap">{text.slice(0, shown)}</span>;
+}
+
 export default function ChatPanel({
   thread,
   profile,
@@ -141,6 +170,8 @@ export default function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastItemRef = useRef<HTMLDivElement>(null);
   const firstScroll = useRef(true);
+  // Everything present on mount is restored history — only type out what comes after.
+  const [historyLength] = useState(thread.length);
   const announcedFieldRef = useRef<ActiveField>(null);
   const t = INTAKE_STRINGS[lang];
 
@@ -238,7 +269,7 @@ export default function ChatPanel({
                   {item.message.role === "user" ? (
                     item.message.content
                   ) : (
-                    <AgentMarkdown>{item.message.content}</AgentMarkdown>
+                    <AssistantBubble text={item.message.content} animate={i >= historyLength} />
                   )}
                 </div>
               </div>
