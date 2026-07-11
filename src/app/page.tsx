@@ -71,8 +71,8 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className="mx-auto w-full max-w-6xl px-6 pt-8 pb-20 sm:pt-12">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+      <section className="mx-auto flex min-h-[88vh] w-full max-w-6xl items-center px-6 pt-8 pb-20 sm:pt-12">
+        <div className="grid w-full grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
             <p className="mb-5 text-xs font-bold uppercase tracking-wide text-white">
               Built for San Francisco residents
@@ -107,17 +107,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="border-t border-white/20 py-24 backdrop-blur-sm">
-        <div className="mx-auto w-full max-w-6xl px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-bold uppercase tracking-wide text-white">How it works</p>
-            <h2 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
-              From a sentence to a screened case
-            </h2>
-          </div>
-
-          <HowItWorksSteps steps={STEPS} />
-        </div>
+      <section id="how-it-works" className="border-t border-white/20 backdrop-blur-sm">
+        <HowItWorksSteps steps={STEPS} />
       </section>
 
       <section className="border-t border-white/20 py-16 backdrop-blur-sm">
