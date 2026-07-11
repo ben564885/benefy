@@ -18,7 +18,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const record = owned.record;
 
   return (
-    <main className="mx-auto flex h-dvh w-full max-w-6xl flex-col px-6 pt-8 pb-6">
+    <main className="flex h-dvh w-full flex-col pt-8 pb-6">
       <ScreeningWorkspace
         clientId={id}
         initialRecord={record}

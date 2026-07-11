@@ -215,7 +215,7 @@ export default function ChatPanel({
           }`}
         >
           {thread.length === 0 && (
-            <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-2 px-6 py-16 text-center">
               <h2 className="text-2xl font-semibold text-slate-900">{t.emptyTitle}</h2>
               <p className="max-w-md text-sm text-slate-500">{t.emptySub}</p>
             </div>
@@ -226,10 +226,10 @@ export default function ChatPanel({
               <div
                 key={i}
                 ref={isLast ? lastItemRef : undefined}
-                className={`flex ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex px-6 ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`w-full rounded-3xl px-4 py-2.5 text-sm ${
+                  className={`max-w-2xl rounded-3xl px-4 py-2.5 text-sm ${
                     item.message.role === "user"
                       ? "whitespace-pre-wrap bg-teal-700 text-white"
                       : "bg-slate-100 text-slate-800"
@@ -243,7 +243,11 @@ export default function ChatPanel({
                 </div>
               </div>
             ) : (
-              <div key={i} ref={isLast ? lastItemRef : undefined}>
+              <div
+                key={i}
+                ref={isLast ? lastItemRef : undefined}
+                className="mx-auto w-full max-w-6xl px-6"
+              >
                 <ResultsCard
                   clientId={clientId}
                   screening={item.screening}
@@ -262,14 +266,14 @@ export default function ChatPanel({
             );
           })}
           {((sending && !sendingGuided) || screeningLoading) && (
-            <div className="flex justify-start">
+            <div className="flex justify-start px-6">
               <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
                 {screeningLoading ? t.checking : t.thinking}
               </div>
             </div>
           )}
           {activeField && !sendingGuided && (
-            <div ref={lastItemRef} className="flex flex-col gap-2">
+            <div ref={lastItemRef} className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6">
               <span className="pl-1 text-xs font-medium text-slate-400">
                 {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
               </span>
@@ -305,7 +309,7 @@ export default function ChatPanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 pt-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 pt-4">
         {resolving && (
           <div className="flex w-fit items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-medium text-amber-800">
             <span>{t.resolvingLabel(resolving.name)}</span>
