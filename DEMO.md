@@ -13,7 +13,7 @@
       (functions + route + KB visible in one screen) and the **Evaluations** page showing the
       `benefy-navigator-honesty` test case with the `benefy-navigator-honesty-run-1` results.
 - [ ] Do one full dry run to warm everything (first inference call of the day is the slowest).
-- [ ] Have `npm test` output in a terminal tab — 19 passing tests is a 3-second flash worth having.
+- [ ] Have `npm test` output in a terminal tab — 31 passing tests is a 3-second flash worth having.
 
 ## The script
 

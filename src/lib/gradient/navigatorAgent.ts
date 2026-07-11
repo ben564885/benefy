@@ -3,13 +3,13 @@
 // official program documents.
 //
 // Three backends, tried in order: the managed Agent Platform with an
-// attached Knowledge Base (currently blocked account-wide — kept ready for
-// when DO support resolves it), then direct Serverless Inference with real
-// tool-calling, grounded by directly injecting the same sourced program
-// facts a Knowledge Base would index (a manual RAG substitute — genuine
-// retrieval isn't available without the Agent Platform, but the model still
-// can't cite a rule that isn't in `programs.json`, since that's the only
-// "knowledge" it's given), then a local template as the last resort.
+// attached Knowledge Base (live — benefy-navigator has benefy-program-docs
+// indexed and attached; see GRADIENT_SETUP.md), then direct Serverless
+// Inference with real tool-calling, grounded by directly injecting the same
+// sourced program facts a Knowledge Base would index (a manual RAG
+// substitute for this tier only — the model still can't cite a rule that
+// isn't in `programs.json`, since that's the only "knowledge" it's given),
+// then a local template as the last resort.
 
 import { callAgent, isAgentConfigured } from "@/lib/gradient/client";
 import { isInferenceConfigured, runToolLoop, NAVIGATOR_MODEL } from "@/lib/gradient/inferenceClient";

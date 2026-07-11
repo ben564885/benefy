@@ -3,11 +3,12 @@
 // required fields. Never states eligibility — that's the Navigator's job,
 // and only after the check_eligibility tool has run (see tools.ts).
 //
-// Three backends, tried in order: the managed Agent Platform (currently
-// blocked account-wide — kept ready for when DO support resolves it), then
-// direct Serverless Inference with real tool-calling orchestrated in our
-// own backend (see inferenceClient.ts), then a local heuristic extractor as
-// the last resort so the app never fully breaks.
+// Three backends, tried in order: the managed Agent Platform (live —
+// benefy-intake/benefy-navigator, deployed and running; see
+// GRADIENT_SETUP.md and client.ts), then direct Serverless Inference with
+// real tool-calling orchestrated in our own backend (see inferenceClient.ts)
+// if an agent call errors or exceeds its deadline, then a local heuristic
+// extractor as the last resort so the app never fully breaks.
 
 import { callAgent, isAgentConfigured } from "@/lib/gradient/client";
 import { isInferenceConfigured, runToolLoop, INTAKE_MODEL } from "@/lib/gradient/inferenceClient";

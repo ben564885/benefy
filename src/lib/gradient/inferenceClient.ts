@@ -1,11 +1,11 @@
 // Direct DigitalOcean Serverless Inference client with a manual tool-calling
-// loop — the interim path used while the managed Agent Platform is blocked
-// account-wide (both the declarative REST/console API and the newer ADK
-// deployment gateway return errors independent of token/billing/region —
-// see GRADIENT_SETUP.md). This hits the same OpenAI-compatible
-// chat-completions endpoint and the same tool-calling wire format Agent
-// Platform uses; the only difference is the tool-call loop is driven by our
-// own backend instead of a DO-managed agent runtime.
+// loop — the tier-2 fallback used when the managed Agent Platform call
+// errors or exceeds its deadline (see client.ts / GRADIENT_SETUP.md; the
+// Agent Platform tier is live — benefy-intake/benefy-navigator are deployed
+// and running). This hits the same OpenAI-compatible chat-completions
+// endpoint and the same tool-calling wire format Agent Platform uses; the
+// only difference is the tool-call loop is driven by our own backend
+// instead of a DO-managed agent runtime.
 //
 // Anthropic/OpenAI-provider models on this endpoint require a subscription
 // tier this account doesn't have (confirmed directly: 403 "not available for

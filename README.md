@@ -35,7 +35,7 @@ credit they'd never heard of.
 npm install
 cp .env.example .env.local   # fill in at least the Supabase vars (persistence + auth)
 npm run dev                  # http://localhost:3000
-npm test                     # engine + eval-harness tests (19 tests, vitest)
+npm test                     # engine + eval-harness + resolution-loop tests (31 tests, vitest)
 npm run build                # production build
 ```
 
@@ -136,13 +136,15 @@ modeled honestly return `needs_review` rather than a guess.
 
 ## Testing
 
-`npm test` runs 19 tests across two suites:
+`npm test` runs 31 tests across three suites:
 
 - `tests/engine.test.ts` — determinism, all `needs_review` triggers, categorical passes, hard
   gates, clear eligible/ineligible bands, savings-total exclusion of needs-review items.
 - `tests/evals.test.ts` — the agent-evaluation harness (`src/lib/gradient/evals.ts`), including the
   explicit "Navigator never asserts eligibility beyond the engine's actual verdict" check, run
   through the real guardrails.
+- `tests/resolution.test.ts` — the needs-review resolution loop (`resolutionAgent.ts`): one targeted
+  question per amber card, re-running the engine, and reporting the before/after delta.
 
 The same honesty contract is also measured on the platform itself: a 10-query golden dataset
 (`benefy-honesty-golden-set`) runs through **DigitalOcean Agent Evaluations** against the live

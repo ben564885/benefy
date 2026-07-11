@@ -383,4 +383,8 @@ to `next.config.ts`, a `Dockerfile` (Node 20, port 8080, standalone build), and 
   `screenClient()`/`store.ts` for the three functions in §1.
 - `next.config.ts` / new `Dockerfile` for App Platform deployment (§7).
 
-None of this is done yet — this file is the spec for it, not a changelog.
+**Status: done.** As of 2026-07-11, `benefy-intake` and `benefy-navigator` are both deployed and
+`STATUS_RUNNING`, functions §1 are attached, the `benefy-navigator` child-agent route from §3 is
+live, `benefy-program-docs` (§4) is indexed and attached to the Navigator, and the
+`benefy-navigator-honesty` evaluation (§6) has real completed runs. This file is left as-is as the
+build record — read `README.md` / `DEMO.md` for the current, accurate status of what's live.
