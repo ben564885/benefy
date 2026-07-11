@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatMessage, ClientProfile, ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import {
   CORE_REQUIRED_FIELDS,
@@ -137,6 +137,13 @@ export default function ChatPanel({
 }: Props) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendingGuided, setSendingGuided] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [thread.length, sending, screeningLoading]);
 
   const missing = missingCoreFields(profile);
   const coreDone = missing.length === 0;
@@ -154,10 +161,12 @@ export default function ChatPanel({
   async function submitMessage(text: string, guided = false) {
     if (!text.trim() || sending) return;
     setSending(true);
+    if (guided) setSendingGuided(true);
     try {
       await onSend(text, guided);
     } finally {
       setSending(false);
+      setSendingGuided(false);
     }
   }
 
@@ -170,7 +179,13 @@ export default function ChatPanel({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex-1 space-y-5 overflow-y-auto py-6" style={{ minHeight: "24rem" }}>
+      <div
+        ref={scrollRef}
+        className={`flex flex-1 flex-col space-y-5 overflow-y-auto py-6 ${
+          thread.length === 0 ? "justify-center" : "justify-end"
+        }`}
+        style={{ minHeight: "24rem" }}
+      >
         {thread.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <h2 className="text-2xl font-semibold text-slate-900">What&apos;s your situation?</h2>
@@ -206,7 +221,7 @@ export default function ChatPanel({
             />
           ),
         )}
-        {(sending || screeningLoading) && (
+        {((sending && !sendingGuided) || screeningLoading) && (
           <div className="flex justify-start">
             <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
               {screeningLoading ? "Checking what you qualify for…" : "Thinking…"}
