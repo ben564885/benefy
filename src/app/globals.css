@@ -12,14 +12,47 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  height: 100%;
+}
+
 body {
+  min-height: 100%;
   background-color: var(--background);
   background-image:
-    radial-gradient(circle at top left, rgba(13, 148, 136, 0.18), transparent 42%),
-    radial-gradient(circle at top right, rgba(13, 148, 136, 0.18), transparent 42%),
-    radial-gradient(circle at bottom left, rgba(13, 148, 136, 0.18), transparent 42%),
-    radial-gradient(circle at bottom right, rgba(13, 148, 136, 0.18), transparent 42%);
+    radial-gradient(ellipse 65vw 55vh at 0% 0%, rgba(13, 148, 136, 0.38), transparent 70%),
+    radial-gradient(ellipse 65vw 55vh at 100% 0%, rgba(13, 148, 136, 0.38), transparent 70%),
+    radial-gradient(ellipse 65vw 55vh at 0% 100%, rgba(13, 148, 136, 0.38), transparent 70%),
+    radial-gradient(ellipse 65vw 55vh at 100% 100%, rgba(13, 148, 136, 0.38), transparent 70%);
+  background-repeat: no-repeat;
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.animate-orb-spin {
+  animation: orb-spin 7s linear infinite;
+}
+
+.animate-orb-spin-reverse {
+  animation: orb-spin-reverse 9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-orb-spin,
+  .animate-orb-spin-reverse {
+    animation: none;
+  }
 }

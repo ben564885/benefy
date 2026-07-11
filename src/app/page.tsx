@@ -49,7 +49,7 @@ const STATS = [
 
 export default function HomePage() {
   return (
-    <main className="flex-1 bg-white text-slate-900">
+    <main className="flex-1 text-slate-900">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
         <Link href="/" className="flex items-center">
           <Image src="/logo_benefy.png" alt="Benefy" width={546} height={222} className="h-7 w-auto" priority />
