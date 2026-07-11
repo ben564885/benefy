@@ -10,6 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
 }
 
 html {
@@ -82,6 +83,25 @@ body {
 
 .animate-marquee-right {
   animation: marquee-right 22s linear infinite;
+}
+
+/* Horizontal results carousel: thin, unobtrusive scrollbar. */
+.results-carousel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(13, 148, 136, 0.35) transparent;
+}
+
+.results-carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.results-carousel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.results-carousel::-webkit-scrollbar-thumb {
+  background-color: rgba(13, 148, 136, 0.35);
+  border-radius: 9999px;
 }
 
 @media (prefers-reduced-motion: reduce) {
