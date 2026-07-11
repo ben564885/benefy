@@ -26,12 +26,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         initialTrace={await getTrace(id)}
         programs={getAllPrograms()}
         header={
-          <div>
+          <div className="flex items-baseline gap-4">
             <Link href="/" className="text-xs font-medium text-slate-500 hover:text-slate-700">
               ← Back home
             </Link>
-            <h1 className="mt-1 text-2xl font-semibold text-slate-900">Your benefits screening</h1>
-            <p className="text-sm text-slate-500">{record.profile.zip_code ?? "No ZIP on file yet"}</p>
+            <h1 className="text-2xl font-semibold text-slate-900">Your benefits screening</h1>
           </div>
         }
         signOut={<SignOutButton />}
