@@ -12,7 +12,12 @@
 import { callAgent, isAgentConfigured } from "@/lib/gradient/client";
 import { isInferenceConfigured, runToolLoop, INTAKE_MODEL } from "@/lib/gradient/inferenceClient";
 import { CHECK_ELIGIBILITY_TOOL, UPDATE_PROFILE_TOOL } from "@/lib/gradient/tools";
-import { extractProfilePatch, missingCoreFields } from "@/lib/gradient/intakeExtractor";
+import {
+  extractProfilePatch,
+  missingCoreFields,
+  missingSeniorDisabilityField,
+  missingVeteranField,
+} from "@/lib/gradient/intakeExtractor";
 import { getClient, screenAndStore, updateProfile } from "@/lib/store";
 import type { ClientProfile, TraceStep } from "@/lib/types";
 
@@ -83,10 +88,23 @@ export function runGuidedIntakeTurn(
   const merged = { ...profile, ...patch };
   const wasMissingCore = missingCoreFields(profile).length > 0;
   const stillMissingCore = missingCoreFields(merged).length > 0;
+  const wasMissingSenior = missingSeniorDisabilityField(profile);
+  const stillMissingSenior = missingSeniorDisabilityField(merged);
+  const wasMissingVeteran = missingVeteranField(profile);
+  const stillMissingVeteran = missingVeteranField(merged);
+  const justFinishedCore = wasMissingCore && !stillMissingCore;
+  const justFinishedSenior = wasMissingSenior && !stillMissingSenior && !stillMissingCore;
+  const justFinishedVeteran = wasMissingVeteran && !stillMissingVeteran && !stillMissingCore && !stillMissingSenior;
+  const readyToScreen = !stillMissingCore && !stillMissingSenior && !stillMissingVeteran;
   return {
     patch,
-    assistant_reply: wasMissingCore && !stillMissingCore ? buildCompletionSummary(merged, lang) : null,
-    ready_to_screen: !stillMissingCore,
+    assistant_reply:
+      justFinishedVeteran ||
+      (justFinishedSenior && !stillMissingVeteran) ||
+      (justFinishedCore && !stillMissingSenior && !stillMissingVeteran)
+        ? buildCompletionSummary(merged, lang)
+        : null,
+    ready_to_screen: readyToScreen,
   };
 }
 
@@ -103,6 +121,8 @@ function buildFollowUpReply(profile: ClientProfile, patch: Partial<ClientProfile
   }
   if (missing.length > 0) {
     parts.push(`Still need: ${missing.map((m) => m.prompt).join(" ")}`);
+  } else if (missingVeteranField(merged)) {
+    parts.push("Are you a veteran or former military? Optional, but it can unlock additional benefits.");
   } else {
     parts.push("Profile looks complete — ready to run the screening.");
   }

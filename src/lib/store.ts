@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { screenClient } from "@/lib/engine";
+import { isLocalDevWithoutSupabase } from "@/lib/devMode";
 import { supabase } from "@/lib/supabase";
 import { EMPTY_APPLICATION_PROFILE } from "@/lib/types";
 import type {
@@ -16,6 +17,8 @@ import type {
 // screening session; chat_history / trace / last_screening are jsonb blobs
 // replaced wholesale, mirroring the old in-memory Map shape 1:1 so callers
 // didn't need to change beyond adding `await`.
+// When Supabase env vars are missing in development, falls back to an
+// in-process Map so `npm run dev` works without .env.local.
 export interface ClientRow {
   client_id: string;
   display_name: string;
@@ -25,6 +28,7 @@ export interface ClientRow {
   member_ages: number[];
   has_senior: boolean | null;
   has_disability: boolean | null;
+  is_veteran: boolean | null;
   immigration_status: string | null;
   sf_resident: boolean | null;
   zip_code: string | null;
@@ -37,6 +41,24 @@ export interface ClientRow {
   trace: TraceStep[];
   user_id: string | null;
   application_profile: ClientProfile["application_profile"];
+}
+
+const globalForMemory = globalThis as unknown as { benefyMemoryClients?: Map<string, ClientRow> };
+const memoryClients = globalForMemory.benefyMemoryClients ?? new Map<string, ClientRow>();
+if (!globalForMemory.benefyMemoryClients) {
+  globalForMemory.benefyMemoryClients = memoryClients;
+}
+
+function useMemoryStore(): boolean {
+  return isLocalDevWithoutSupabase();
+}
+
+function getMemoryRow(clientId: string): ClientRow | undefined {
+  return memoryClients.get(clientId);
+}
+
+function setMemoryRow(row: ClientRow): void {
+  memoryClients.set(row.client_id, row);
 }
 
 // supabase-js's generic Database inference collapses to `never` for
@@ -59,6 +81,7 @@ function rowToRecord(row: ClientRow): ClientRecord {
     member_ages,
     has_senior,
     has_disability,
+    is_veteran,
     immigration_status,
     sf_resident,
     zip_code,
@@ -78,6 +101,7 @@ function rowToRecord(row: ClientRow): ClientRecord {
     member_ages,
     has_senior,
     has_disability,
+    is_veteran,
     immigration_status: immigration_status as ClientProfile["immigration_status"],
     sf_resident,
     zip_code,
@@ -102,6 +126,7 @@ function profileToRow(
     member_ages: profile.member_ages,
     has_senior: profile.has_senior,
     has_disability: profile.has_disability,
+    is_veteran: profile.is_veteran,
     immigration_status: profile.immigration_status,
     sf_resident: profile.sf_resident,
     zip_code: profile.zip_code,
@@ -114,6 +139,11 @@ function profileToRow(
 }
 
 export async function listClientsForUser(userId: string): Promise<ClientRecord[]> {
+  if (useMemoryStore()) {
+    return [...memoryClients.values()]
+      .filter((row) => row.user_id === userId)
+      .map(rowToRecord);
+  }
   const { data, error } = await clientsTable()
     .select("*")
     .eq("user_id", userId)
@@ -127,12 +157,19 @@ export async function listClientsForUser(userId: string): Promise<ClientRecord[]
 // runs. Every other function in this file trusts that the caller has
 // already verified the requesting user owns clientId.
 export async function getClientOwnerId(clientId: string): Promise<string | null> {
+  if (useMemoryStore()) {
+    return getMemoryRow(clientId)?.user_id ?? null;
+  }
   const { data, error } = await clientsTable().select("user_id").eq("client_id", clientId).maybeSingle();
   if (error) throw error;
   return data?.user_id ?? null;
 }
 
 export async function getClient(clientId: string): Promise<ClientRecord | undefined> {
+  if (useMemoryStore()) {
+    const row = getMemoryRow(clientId);
+    return row ? rowToRecord(row) : undefined;
+  }
   const { data, error } = await clientsTable()
     .select("*")
     .eq("client_id", clientId)
@@ -142,6 +179,17 @@ export async function getClient(clientId: string): Promise<ClientRecord | undefi
 }
 
 export async function createClient(profile: ClientProfile, userId: string): Promise<ClientRecord> {
+  if (useMemoryStore()) {
+    const row: ClientRow = {
+      ...profileToRow(profile),
+      user_id: userId,
+      last_screening: null,
+      chat_history: [],
+      trace: [],
+    };
+    setMemoryRow(row);
+    return rowToRecord(row);
+  }
   const { data, error } = await clientsTable()
     .insert({ ...profileToRow(profile), user_id: userId, last_screening: null, chat_history: [], trace: [] })
     .select("*")
@@ -157,6 +205,13 @@ export async function updateProfile(
   const existing = await getClient(clientId);
   if (!existing) return undefined;
   const merged = { ...existing.profile, ...patch };
+  if (useMemoryStore()) {
+    const row = getMemoryRow(clientId);
+    if (!row) return undefined;
+    const updated: ClientRow = { ...row, ...profileToRow(merged) };
+    setMemoryRow(updated);
+    return rowToRecord(updated);
+  }
   const { data, error } = await clientsTable()
     .update(profileToRow(merged))
     .eq("client_id", clientId)
@@ -170,6 +225,17 @@ export async function screenAndStore(clientId: string): Promise<ClientRecord | u
   const existing = await getClient(clientId);
   if (!existing) return undefined;
   const screening = screenClient(existing.profile);
+  if (useMemoryStore()) {
+    const row = getMemoryRow(clientId);
+    if (!row) return undefined;
+    const updated: ClientRow = {
+      ...row,
+      last_screening: screening,
+      last_screened_at: screening.screened_at,
+    };
+    setMemoryRow(updated);
+    return rowToRecord(updated);
+  }
   const { data, error } = await clientsTable()
     .update({ last_screening: screening, last_screened_at: screening.screened_at })
     .eq("client_id", clientId)
@@ -180,6 +246,9 @@ export async function screenAndStore(clientId: string): Promise<ClientRecord | u
 }
 
 export async function getChatHistory(clientId: string): Promise<ChatMessage[]> {
+  if (useMemoryStore()) {
+    return getMemoryRow(clientId)?.chat_history ?? [];
+  }
   const { data, error } = await clientsTable()
     .select("chat_history")
     .eq("client_id", clientId)
@@ -189,6 +258,12 @@ export async function getChatHistory(clientId: string): Promise<ChatMessage[]> {
 }
 
 export async function appendChatMessages(clientId: string, messages: ChatMessage[]): Promise<void> {
+  if (useMemoryStore()) {
+    const row = getMemoryRow(clientId);
+    if (!row) return;
+    setMemoryRow({ ...row, chat_history: [...row.chat_history, ...messages] });
+    return;
+  }
   const existing = await getChatHistory(clientId);
   const { error } = await clientsTable()
     .update({ chat_history: [...existing, ...messages] })
@@ -197,6 +272,9 @@ export async function appendChatMessages(clientId: string, messages: ChatMessage
 }
 
 export async function getTrace(clientId: string): Promise<TraceStep[]> {
+  if (useMemoryStore()) {
+    return getMemoryRow(clientId)?.trace ?? [];
+  }
   const { data, error } = await clientsTable()
     .select("trace")
     .eq("client_id", clientId)
@@ -206,6 +284,12 @@ export async function getTrace(clientId: string): Promise<TraceStep[]> {
 }
 
 export async function setTrace(clientId: string, trace: TraceStep[]): Promise<void> {
+  if (useMemoryStore()) {
+    const row = getMemoryRow(clientId);
+    if (!row) return;
+    setMemoryRow({ ...row, trace });
+    return;
+  }
   const { error } = await clientsTable().update({ trace }).eq("client_id", clientId);
   if (error) throw error;
 }

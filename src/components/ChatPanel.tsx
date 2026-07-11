@@ -26,9 +26,13 @@ interface Props {
   programs: ProgramDefinition[];
   lang?: Lang;
   onSend: (message: string, guided?: boolean, display?: string) => Promise<void>;
+  onSkipVeteran?: () => void;
   onResolve: (programId: string) => void;
   onRecheck?: () => void;
   screeningLoading?: boolean;
+  veteranStepDismissed?: boolean;
+  hasScreening?: boolean;
+  onAskQuestion?: (question: string) => Promise<string | null>;
   disabled?: boolean;
   placeholder?: string;
   resolving?: { programId: string; name: string } | null;
@@ -41,6 +45,7 @@ type ActiveField =
   | "sf_resident"
   | "immigration_status"
   | "senior_disability"
+  | "veteran_status"
   | null;
 
 function IncomeQuickInput({
@@ -116,9 +121,13 @@ export default function ChatPanel({
   programs,
   lang = "en",
   onSend,
+  onSkipVeteran,
   onResolve,
   onRecheck,
   screeningLoading,
+  veteranStepDismissed = false,
+  hasScreening = false,
+  onAskQuestion,
   disabled,
   placeholder,
   resolving,
@@ -132,11 +141,6 @@ export default function ChatPanel({
   const firstScroll = useRef(true);
   const t = INTAKE_STRINGS[lang];
 
-  // Track the conversation: jump to the bottom on load, glide there on every
-  // new message / typing indicator so a sent message is always in view. A
-  // freshly landed results card is tall (summary, program grid, disclosures),
-  // so scrolling the container to its scrollHeight buries the summary off
-  // the top of the viewport — scroll that card's own top into view instead.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -151,11 +155,23 @@ export default function ChatPanel({
 
   const missing = missingCoreFields(profile);
   const coreDone = missing.length === 0;
-  // While resolving a specific program, the targeted question owns the
-  // conversation — hide the generic guided chips so answers go to /resolve.
-  const activeField: ActiveField = resolving || coreDone ? null : (missing[0].key as ActiveField);
-  const questionNumber = CORE_REQUIRED_FIELDS.length - missing.length + 1;
-  const questionPrompt = !coreDone ? t.prompts[missing[0].key as string] : "";
+  const showVeteranOptional = coreDone && profile.is_veteran == null && !veteranStepDismissed;
+  const activeField: ActiveField = resolving
+    ? null
+    : !coreDone
+      ? (missing[0].key as ActiveField)
+      : showVeteranOptional
+        ? "veteran_status"
+        : null;
+  const questionNumber = !coreDone
+    ? CORE_REQUIRED_FIELDS.length - missing.length + 1
+    : CORE_REQUIRED_FIELDS.length + 1;
+  const questionTotal = showVeteranOptional ? CORE_REQUIRED_FIELDS.length + 1 : CORE_REQUIRED_FIELDS.length;
+  const questionPrompt = !coreDone
+    ? t.prompts[missing[0].key as string]
+    : showVeteranOptional
+      ? t.veteranPrompt
+      : "";
 
   async function submitMessage(text: string, guided = false, display?: string) {
     if (!text.trim() || sending) return;
@@ -176,69 +192,72 @@ export default function ChatPanel({
     await submitMessage(text);
   }
 
+  const composerPlaceholder =
+    placeholder ??
+    (resolving ? t.resolvePlaceholder : hasScreening ? t.summaryAskPlaceholder : t.composerPlaceholder);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto py-6">
-        {/* justify-* lives on this inner column, not the scroll container —
-            justify-end on a scrolling flexbox makes overflowing content at
-            the top unreachable in some browsers. */}
         <div
           className={`flex min-h-full flex-col space-y-5 ${
             thread.length === 0 ? "justify-center" : "justify-end"
           }`}
         >
-        {thread.length === 0 && (
-          <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <h2 className="text-2xl font-semibold text-slate-900">{t.emptyTitle}</h2>
-            <p className="max-w-md text-sm text-slate-500">{t.emptySub}</p>
-          </div>
-        )}
-        {thread.map((item, i) => {
-          const isLast = i === thread.length - 1;
-          return item.kind === "message" ? (
-            <div
-              key={i}
-              ref={isLast ? lastItemRef : undefined}
-              className={`flex ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+          {thread.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-16 text-center">
+              <h2 className="text-2xl font-semibold text-slate-900">{t.emptyTitle}</h2>
+              <p className="max-w-md text-sm text-slate-500">{t.emptySub}</p>
+            </div>
+          )}
+          {thread.map((item, i) => {
+            const isLast = i === thread.length - 1;
+            return item.kind === "message" ? (
               <div
-                className={`max-w-[85%] rounded-3xl px-4 py-2.5 text-sm ${
-                  item.message.role === "user"
-                    ? "whitespace-pre-wrap bg-teal-700 text-white"
-                    : "bg-slate-100 text-slate-800"
-                }`}
+                key={i}
+                ref={isLast ? lastItemRef : undefined}
+                className={`flex ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {item.message.role === "user" ? (
-                  item.message.content
-                ) : (
-                  <AgentMarkdown>{item.message.content}</AgentMarkdown>
-                )}
+                <div
+                  className={`max-w-[85%] rounded-3xl px-4 py-2.5 text-sm ${
+                    item.message.role === "user"
+                      ? "whitespace-pre-wrap bg-teal-700 text-white"
+                      : "bg-slate-100 text-slate-800"
+                  }`}
+                >
+                  {item.message.role === "user" ? (
+                    item.message.content
+                  ) : (
+                    <AgentMarkdown>{item.message.content}</AgentMarkdown>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div key={i} ref={isLast ? lastItemRef : undefined}>
+                <ResultsCard
+                  clientId={clientId}
+                  screening={item.screening}
+                  programs={programs}
+                  explanation={item.explanation}
+                  explanationPending={item.explanationPending}
+                  citations={item.citations}
+                  mode={item.mode}
+                  trace={item.trace}
+                  lang={lang}
+                  onAsk={onAskQuestion}
+                  onResolve={onResolve}
+                  onRecheck={onRecheck}
+                />
+              </div>
+            );
+          })}
+          {((sending && !sendingGuided) || screeningLoading) && (
+            <div className="flex justify-start">
+              <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
+                {screeningLoading ? t.checking : t.thinking}
               </div>
             </div>
-          ) : (
-            <div key={i} ref={isLast ? lastItemRef : undefined}>
-              <ResultsCard
-                clientId={clientId}
-                screening={item.screening}
-                programs={programs}
-                explanation={item.explanation}
-                explanationPending={item.explanationPending}
-                citations={item.citations}
-                mode={item.mode}
-                trace={item.trace}
-                onResolve={onResolve}
-                onRecheck={onRecheck}
-              />
-            </div>
-          );
-        })}
-        {((sending && !sendingGuided) || screeningLoading) && (
-          <div className="flex justify-start">
-            <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
-              {screeningLoading ? t.checking : t.thinking}
-            </div>
-          </div>
-        )}
+          )}
         </div>
       </div>
 
@@ -259,12 +278,14 @@ export default function ChatPanel({
         {activeField && (
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-slate-400">
-              {t.questionOf(questionNumber, CORE_REQUIRED_FIELDS.length)} · {questionPrompt}
+              {activeField === "veteran_status"
+                ? `${t.optional} · ${questionPrompt}`
+                : `${t.questionOf(questionNumber, questionTotal)} · ${questionPrompt}`}
             </span>
             {activeField === "monthly_income_gross" ? (
               <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {t.chips[activeField].map((chip) => (
                   <button
                     key={chip.value}
@@ -276,17 +297,30 @@ export default function ChatPanel({
                     {chip.label}
                   </button>
                 ))}
+                {activeField === "veteran_status" && (
+                  <button
+                    type="button"
+                    disabled={disabled || sending}
+                    onClick={onSkipVeteran}
+                    className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t.skipOptionalLabel}
+                  </button>
+                )}
               </div>
             )}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm">
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm"
+        >
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={disabled || sending}
-            placeholder={placeholder ?? (resolving ? t.resolvePlaceholder : t.composerPlaceholder)}
+            placeholder={composerPlaceholder}
             className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
           />
           <button

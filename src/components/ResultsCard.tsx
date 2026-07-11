@@ -3,10 +3,16 @@
 import { useState } from "react";
 import type { ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
+import { INTAKE_STRINGS, type Lang } from "@/lib/i18n";
 import AgentMarkdown from "@/components/AgentMarkdown";
 import ApplyPanel from "@/components/ApplyPanel";
 import ProgramCard from "@/components/ProgramCard";
 import TraceView from "@/components/TraceView";
+
+interface FollowUp {
+  question: string;
+  answer: string;
+}
 
 interface Props {
   clientId: string;
@@ -17,6 +23,8 @@ interface Props {
   citations: { program_id: string; source: string; url: string }[];
   mode: "live_gradient_agent" | "live_inference" | "local_fallback" | null;
   trace: TraceStep[];
+  lang?: Lang;
+  onAsk?: (question: string) => Promise<string | null>;
   onResolve: (programId: string) => void;
   onRecheck?: () => void;
 }
@@ -30,16 +38,45 @@ export default function ResultsCard({
   citations,
   mode,
   trace,
+  lang = "en",
+  onAsk,
   onResolve,
   onRecheck,
 }: Props) {
   const [showTrace, setShowTrace] = useState(false);
+  const [showSources, setShowSources] = useState(false);
   const [showIneligible, setShowIneligible] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const t = INTAKE_STRINGS[lang];
   const programName = (id: string) => programs.find((p) => p.program_id === id)?.name ?? id;
+  const uniqueSources = [...new Map(citations.map((c) => [c.source, c])).values()];
 
-  // Only surface programs worth the user's attention — wins first, then the
-  // ones a quick answer could unlock. Likely-ineligible results stay out of
-  // the reveal entirely, behind the disclosure toggle below.
+  async function submitQuestion(text: string) {
+    if (!text.trim() || !onAsk || asking) return;
+    const question = text.trim();
+    setDraft("");
+    setAsking(true);
+    setFollowUps((prev) => [...prev, { question, answer: "" }]);
+    try {
+      const answer = await onAsk(question);
+      setFollowUps((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last && last.question === question) {
+          next[next.length - 1] = {
+            question,
+            answer: answer?.trim() || "Sorry, I couldn't answer that right now. Please try again.",
+          };
+        }
+        return next;
+      });
+    } finally {
+      setAsking(false);
+    }
+  }
+
   const shownResults = [
     ...screening.results.filter((r) => r.status === "likely_eligible"),
     ...screening.results.filter((r) => r.status === "needs_review"),
@@ -111,41 +148,118 @@ export default function ResultsCard({
       )}
 
       {!explanation && explanationPending && (
-        <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
           <p className="animate-pulse text-sm text-slate-400">Writing your plain-language explanation…</p>
         </div>
       )}
 
       {explanation && (
-        <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-          <div className="text-sm text-slate-700">
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-slate-900">Quick summary</h3>
+          <div className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-700">
             <AgentMarkdown>{explanation}</AgentMarkdown>
           </div>
+          {uniqueSources.length > 0 && (
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowSources((v) => !v)}
+                className="text-xs font-medium text-teal-700 hover:text-teal-900"
+              >
+                {showSources ? "Hide sources ▲" : `View sources (${uniqueSources.length}) ▼`}
+              </button>
+              {showSources && (
+                <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  {uniqueSources.map((c) => (
+                    <li key={c.source} className="text-xs text-slate-500">
+                      <a href={c.url} target="_blank" rel="noreferrer" className="text-teal-700 hover:underline">
+                        {c.source}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {mode && (
-            <span
-              className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[11px] ${
-                mode === "local_fallback" ? "bg-slate-200 text-slate-500" : "bg-emerald-100 text-emerald-700"
-              }`}
-            >
+            <p className="mt-3 text-[11px] text-slate-400">
               {mode === "live_gradient_agent"
-                ? "Live Gradient Agent Platform"
+                ? "Powered by Gradient Agent Platform"
                 : mode === "live_inference"
-                  ? "Live DigitalOcean Inference"
+                  ? "Powered by DigitalOcean Inference"
                   : "Local fallback"}
-            </span>
+            </p>
           )}
-          {citations.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-              {citations.map((c) => (
-                <li key={c.program_id} className="text-xs text-slate-500">
-                  <a href={c.url} target="_blank" rel="noreferrer" className="text-teal-700 hover:underline">
-                    {c.source}
-                  </a>
-                </li>
+        </section>
+      )}
+
+      {onAsk && (
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">{t.summaryAskLabel}</h3>
+            <p className="mt-1 text-xs text-slate-500">{t.summaryAskHint}</p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {t.summarySuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                disabled={asking}
+                onClick={() => submitQuestion(suggestion)}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-xs font-medium text-slate-700 transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-900 disabled:opacity-50"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+
+          {followUps.length > 0 && (
+            <div className="mt-4 max-h-72 space-y-3 overflow-y-auto border-t border-slate-100 pt-4">
+              {followUps.map((item, i) => (
+                <article key={i} className="overflow-hidden rounded-lg border border-slate-200">
+                  <div className="border-b border-slate-100 bg-slate-50 px-3 py-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{t.youAsked}</p>
+                    <p className="mt-0.5 text-sm font-medium text-slate-800">{item.question}</p>
+                  </div>
+                  <div className="px-3 py-3 text-sm leading-relaxed text-slate-700">
+                    {item.answer ? (
+                      <AgentMarkdown>{item.answer}</AgentMarkdown>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 text-slate-400">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-500" />
+                        {t.thinking}
+                      </span>
+                    )}
+                  </div>
+                </article>
               ))}
-            </ul>
+            </div>
           )}
-        </div>
+
+          <form
+            className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submitQuestion(draft);
+            }}
+          >
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={asking}
+              placeholder={t.summaryAskPlaceholder}
+              className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-teal-400 focus:bg-white disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={asking || !draft.trim()}
+              className="shrink-0 rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-40"
+            >
+              {t.send}
+            </button>
+          </form>
+        </section>
       )}
 
       <div className="flex items-center gap-4">

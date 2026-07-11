@@ -15,6 +15,7 @@ create table if not exists public.clients (
   member_ages integer[] not null default '{}',
   has_senior boolean,
   has_disability boolean,
+  is_veteran boolean,
   immigration_status text,
   sf_resident boolean,
   zip_code text,

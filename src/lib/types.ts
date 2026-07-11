@@ -43,6 +43,7 @@ export interface ClientProfile {
   member_ages: number[];
   has_senior: boolean | null;
   has_disability: boolean | null;
+  is_veteran: boolean | null;
   immigration_status: ImmigrationStatus | null;
   sf_resident: boolean | null;
   zip_code: string | null;

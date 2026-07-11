@@ -18,12 +18,24 @@ const NAVIGATOR_SIGNALS = [
   /\bwhich programs?\b/,
 ];
 
+// After a screening exists, only route back to Intake when the user is
+// clearly correcting or adding profile facts — everything else goes to Navigator.
+const INTAKE_UPDATE_SIGNALS = [
+  /\$\d/,
+  /\bhousehold of\b/,
+  /\bi live (in|outside)\b/,
+  /\bmy income\b/,
+  /\bactually\b/,
+  /\bcorrect\b/,
+  /\bupdate my\b/,
+  /\bi(?:'m| am) a (u\.?s\.? )?citizen\b/,
+  /\bpermanent resident\b/,
+  /\bveteran\b|\bmilitary\b/,
+  /\bsenior\b|\bdisabilit/,
+];
+
 // "Ask me the rest", "resolve the unresolved", "finish the questions" —
-// requests to work through the needs-review items. These go straight into
-// the deterministic resolution loop: no model call, no multi-second
-// tool-loop round trip, no model paraphrasing engine output back at the
-// user. Checked before navigator signals ("resolve... why is it unresolved"
-// is still a resolve request).
+// requests to work through the needs-review items.
 const RESOLVE_SIGNALS = [
   /\bresolve\b/,
   /\bunresolved\b/,
@@ -44,7 +56,13 @@ export function routeTurn(
   if (hasExistingScreening && needsReviewCount > 0 && RESOLVE_SIGNALS.some((p) => p.test(lower))) {
     return "resolve";
   }
+  if (hasExistingScreening && INTAKE_UPDATE_SIGNALS.some((p) => p.test(lower))) {
+    return "intake";
+  }
   if (hasExistingScreening && NAVIGATOR_SIGNALS.some((p) => p.test(lower))) {
+    return "navigator";
+  }
+  if (hasExistingScreening) {
     return "navigator";
   }
   return "intake";

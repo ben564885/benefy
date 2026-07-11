@@ -13,15 +13,12 @@ interface Props {
   initialChat: ChatMessage[];
   initialTrace: TraceStep[];
   programs: ProgramDefinition[];
-  // Server-rendered header pieces (title block, sign-out) — rendered here so
-  // the language/intake toggles can share one row with them instead of
-  // costing the chat a row of their own.
   header?: React.ReactNode;
   signOut?: React.ReactNode;
 }
 
-function isReadyToScreen(profile: ClientProfile): boolean {
-  return missingCoreFields(profile).length === 0;
+function canRunScreen(profile: ClientProfile, veteranStepDismissed: boolean): boolean {
+  return missingCoreFields(profile).length === 0 && (profile.is_veteran != null || veteranStepDismissed);
 }
 
 function buildInitialThread(
@@ -58,6 +55,7 @@ export default function ScreeningWorkspace({
   );
   const [hasScreening, setHasScreening] = useState(initialRecord.last_screening != null);
   const [screeningLoading, setScreeningLoading] = useState(false);
+  const [veteranStepDismissed, setVeteranStepDismissed] = useState(initialRecord.profile.is_veteran != null);
   const [intakeMode, setIntakeMode] = useState<"text" | "voice">("text");
   const [lang, setLang] = useState<Lang>("en");
   const [resolving, setResolving] = useState<{ programId: string; name: string } | null>(null);
@@ -69,9 +67,6 @@ export default function ScreeningWorkspace({
     setProfile(data.client.profile);
   }
 
-  // Fetches the Navigator explanation after the engine result is already on
-  // screen, and patches it into the newest results item. Fire-and-forget —
-  // the dollar reveal never waits on a language model.
   function fillInExplanation() {
     fetch(`/api/clients/${clientId}/explain`, { method: "POST" })
       .then(async (res) => {
@@ -129,9 +124,6 @@ export default function ScreeningWorkspace({
     }
   }
 
-  // Replaces the newest results card's screening in place so the dollar
-  // total ticks up (and amber cards flip) as resolution answers land,
-  // instead of stacking a second full results card in the thread.
   function patchLatestResults(screening: ScreeningResult, trace: TraceStep[]) {
     setThread((prev) => {
       const next = [...prev];
@@ -144,6 +136,20 @@ export default function ScreeningWorkspace({
       }
       return next;
     });
+  }
+
+  async function handleAskQuestion(question: string): Promise<string | null> {
+    const res = await fetch(`/api/clients/${clientId}/intake`, {
+      method: "POST",
+      body: JSON.stringify({ message: question, lang }),
+    });
+    const data = await res.json();
+    if (!res.ok) return "Sorry, I couldn't answer that right now. Please try again.";
+
+    return (
+      data.assistant_reply?.trim() ||
+      "I couldn't generate an answer. Try asking about a specific program, or click \"What does this mean?\""
+    );
   }
 
   async function handleSend(message: string, guided?: boolean, display?: string) {
@@ -173,8 +179,6 @@ export default function ScreeningWorkspace({
       }
       if (data.profile) setProfile(data.profile);
       if (data.screening) patchLatestResults(data.screening, data.trace ?? []);
-      // The server chains to the next needs-review program automatically —
-      // follow it, or exit resolution mode when nothing resolvable is left.
       const nextId: string | null = data.resolving_program_id ?? null;
       const nextProgram = nextId ? programs.find((p) => p.program_id === nextId) : undefined;
       setResolving(nextProgram ? { programId: nextProgram.program_id, name: nextProgram.name } : null);
@@ -188,7 +192,7 @@ export default function ScreeningWorkspace({
     const data = await res.json();
     if (!res.ok) return;
 
-    if (data.assistant_reply) {
+    if (data.assistant_reply?.trim()) {
       setThread((prev) => [
         ...prev,
         {
@@ -200,16 +204,29 @@ export default function ScreeningWorkspace({
 
     const updatedProfile: ClientProfile = data.profile ?? profile;
     if (data.profile) setProfile(data.profile);
+    if (updatedProfile.is_veteran != null) {
+      setVeteranStepDismissed(true);
+    }
 
-    // "Resolve the unresolved" typed into the composer: the intake route
-    // answers with the first targeted question and hands us the program to
-    // enter resolution mode on.
     if (data.resolve_target?.program_id) {
       const program = programs.find((p) => p.program_id === data.resolve_target.program_id);
       if (program) setResolving({ programId: program.program_id, name: program.name });
     }
 
-    if (!hasScreening && isReadyToScreen(updatedProfile)) {
+    const readyToScreen = canRunScreen(
+      updatedProfile,
+      veteranStepDismissed || updatedProfile.is_veteran != null,
+    );
+    if (!hasScreening && readyToScreen) {
+      await runScreen();
+    } else if (hasScreening && data.ready_to_screen) {
+      await runScreen();
+    }
+  }
+
+  async function handleSkipVeteran() {
+    setVeteranStepDismissed(true);
+    if (!hasScreening && canRunScreen(profile, true)) {
       await runScreen();
     }
   }
@@ -283,9 +300,13 @@ export default function ScreeningWorkspace({
           programs={programs}
           lang={lang}
           onSend={handleSend}
+          onSkipVeteran={handleSkipVeteran}
           onResolve={handleResolve}
           onRecheck={runScreen}
           screeningLoading={screeningLoading}
+          veteranStepDismissed={veteranStepDismissed}
+          hasScreening={hasScreening}
+          onAskQuestion={handleAskQuestion}
           resolving={resolving}
           onCancelResolve={() => setResolving(null)}
         />

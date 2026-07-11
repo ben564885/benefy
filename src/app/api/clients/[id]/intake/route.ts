@@ -100,16 +100,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   if (target === "navigator" && record.last_screening) {
     const explanation = await explainScreening(record.profile, record.last_screening, message, trace, id);
+    const reply =
+      explanation.text?.trim() ||
+      "I couldn't generate an answer right now. Try asking about a specific program by name, or ask \"What does this mean?\"";
     const assistantMessage: ChatMessage = {
       role: "assistant",
-      content: explanation.text,
+      content: reply,
       timestamp: new Date().toISOString(),
     };
     await appendChatMessages(id, [userMessage, assistantMessage]);
     await setTrace(id, trace);
     return NextResponse.json({
       target,
-      assistant_reply: explanation.text,
+      assistant_reply: reply,
       citations: explanation.citations,
       guardrail_violations: explanation.guardrail_violations,
       mode: explanation.mode,

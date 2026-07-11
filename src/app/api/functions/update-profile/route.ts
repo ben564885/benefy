@@ -61,6 +61,7 @@ export async function POST(request: Request) {
   }
   if (body.has_senior != null) patch.has_senior = Boolean(body.has_senior);
   if (body.has_disability != null) patch.has_disability = Boolean(body.has_disability);
+  if (body.is_veteran != null) patch.is_veteran = Boolean(body.is_veteran);
   if (body.immigration_status != null) {
     patch.immigration_status = body.immigration_status as ImmigrationStatus;
   }
