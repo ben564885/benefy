@@ -37,21 +37,10 @@ export default function ResultsCard({ clientId, screening, programs, trace, onRe
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl p-6 text-center">
-        <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Estimated benefits surfaced</p>
-        <p className="mt-1 text-4xl font-bold text-emerald-800">
+        <p className="text-4xl font-bold text-emerald-800">
           {formatMoney(screening.total_estimated_annual_value)}
           <span className="text-lg font-medium text-emerald-600"> / year</span>
         </p>
-        <p className="mt-1 text-sm text-emerald-700">
-          {formatMoney(screening.total_estimated_monthly_value)} / month · {screening.eligible_count} likely-eligible
-          program(s)
-        </p>
-        {screening.needs_review_count > 0 && (
-          <p className="mt-2 text-xs text-amber-700">
-            +{formatMoney(screening.potential_additional_value)}/year potential if {screening.needs_review_count}{" "}
-            needs-review item(s) are confirmed eligible.
-          </p>
-        )}
       </div>
 
       <ApplyPanel clientId={clientId} screening={screening} programs={programs} />
