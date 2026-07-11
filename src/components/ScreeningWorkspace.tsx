@@ -12,6 +12,11 @@ interface Props {
   initialChat: ChatMessage[];
   initialTrace: TraceStep[];
   programs: ProgramDefinition[];
+  // Server-rendered header pieces (title block, sign-out) — rendered here so
+  // the language/intake toggles can share one row with them instead of
+  // costing the chat a row of their own.
+  header?: React.ReactNode;
+  signOut?: React.ReactNode;
 }
 
 function isReadyToScreen(profile: ClientProfile): boolean {
@@ -42,7 +47,15 @@ function buildInitialThread(
   return items;
 }
 
-export default function ScreeningWorkspace({ clientId, initialRecord, initialChat, initialTrace, programs }: Props) {
+export default function ScreeningWorkspace({
+  clientId,
+  initialRecord,
+  initialChat,
+  initialTrace,
+  programs,
+  header,
+  signOut,
+}: Props) {
   const [profile, setProfile] = useState<ClientProfile>(initialRecord.profile);
   const [thread, setThread] = useState<ThreadItem[]>(() =>
     buildInitialThread(initialChat, initialRecord, initialTrace),
@@ -228,37 +241,41 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="flex items-center gap-2 self-end">
-        <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
-          {LANGS.map((l) => (
+      <div className="flex items-start justify-between gap-4">
+        {header}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setLang(l.code)}
+                className={`rounded-full px-3 py-1 font-medium transition ${
+                  lang === l.code ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
             <button
-              key={l.code}
-              onClick={() => setLang(l.code)}
+              onClick={() => setIntakeMode("text")}
               className={`rounded-full px-3 py-1 font-medium transition ${
-                lang === l.code ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                intakeMode === "text" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {l.label}
+              Text
             </button>
-          ))}
-        </div>
-        <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
-        <button
-          onClick={() => setIntakeMode("text")}
-          className={`rounded-full px-3 py-1 font-medium transition ${
-            intakeMode === "text" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Text
-        </button>
-        <button
-          onClick={() => setIntakeMode("voice")}
-          className={`rounded-full px-3 py-1 font-medium transition ${
-            intakeMode === "voice" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Voice (beta)
-        </button>
+            <button
+              onClick={() => setIntakeMode("voice")}
+              className={`rounded-full px-3 py-1 font-medium transition ${
+                intakeMode === "voice" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Voice (beta)
+            </button>
+          </div>
+          {signOut}
         </div>
       </div>
 
