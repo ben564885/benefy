@@ -46,6 +46,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         { status: 400 },
       );
     }
+    // Only genuinely-verified adapters may be enqueued. The results page
+    // already hides the auto-apply checkbox for non-ready programs; this is
+    // the server-side guard so an unverified adapter can't be reached even if
+    // the request is crafted by hand.
+    if (!program.application.auto_apply_ready) {
+      return NextResponse.json(
+        { error: `${program.name} can't be applied for automatically — apply using its prefilled draft instead.` },
+        { status: 400 },
+      );
+    }
     programs.push(program);
   }
 

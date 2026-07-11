@@ -45,7 +45,7 @@ async function processPdfJob(row: SubmissionRow): Promise<void> {
   await markStatus(row.id, "filling");
   try {
     const data = await fetchApplicantData(row.client_id, row.program_id);
-    const { pdfBytes, unfillable } = await adapter.fill(data);
+    const { pdfBytes, unfillable, receiptNote } = await adapter.fill(data);
     const url = await saveArtifact(
       row.client_id,
       row.id,
@@ -61,7 +61,8 @@ async function processPdfJob(row: SubmissionRow): Promise<void> {
       });
     } else {
       await markStatus(row.id, "submitted", {
-        receipt_note: "PDF generated — download, review, sign, and submit per the program's own instructions.",
+        receipt_note:
+          receiptNote ?? "PDF generated — download, review, sign, and submit per the program's own instructions.",
         newArtifacts: artifacts,
       });
     }

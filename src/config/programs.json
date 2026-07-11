@@ -82,6 +82,7 @@
         "current_programs": "field_categorical_program"
       },
       "apply_mode": "pdf_fill",
+      "auto_apply_ready": true,
       "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "pge_account_number"]
     }
   },
@@ -474,6 +475,7 @@
         "zip_code": "field_zip_code"
       },
       "apply_mode": "web_submit",
+      "auto_apply_ready": true,
       "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "phone", "email", "sfpuc_account_number"]
     }
   },
@@ -654,7 +656,8 @@
         "member_ages": "field_qualifying_children"
       },
       "apply_mode": "pdf_fill",
-      "required_application_fields": ["legal_name", "ssn_encrypted", "street_address", "city", "mailing_zip_code"]
+      "auto_apply_ready": true,
+      "required_application_fields": ["legal_name"]
     }
   }
 ]

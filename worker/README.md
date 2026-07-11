@@ -44,7 +44,7 @@ no automation — see the "adapters must never guess" rule in
 |---|---|---|---|
 | `sfpuc_cap` | web_submit | ✅ true | Live-walked all 4 pages via the `browse` skill against `forms.office.com/g/Ut4PWU2b1y`. Real TransUnion soft-pull consent on page 3 — see `sfpuc_cap.ts` doc comment. Additional-income-earner households route to `needs_human` (sub-form unverified). |
 | `pge_care` | pdf_fill | ✅ true | Real AcroForm field names read via pdf-lib against the live PDF. Signature/date left blank by design (perjury attestation — human must sign). |
-| `caleitc` | pdf_fill | ❌ false | FTB Form 3514's 95 AcroForm fields are opaque generated codes (`3514_Form_1016`, etc.) with no semantic names — filling this blind on a tax document is a real risk of misfiling SSN/income into the wrong box. Needs a visual field-position audit before it's safe to automate. |
+| `caleitc` | pdf_fill | ✅ true | FTB Form 3514's 95 AcroForm fields are opaque generated codes (`3514_Form_1016`, etc.), so they were mapped positionally, not by name (see "How caleitc was verified" below). The adapter fills only the name header and the Part III qualifying-child columns (name, DOB, relationship); every SSN box, all calculation lines (AGI, EIC, investment income, the credit), and the Part I / line 9a–9b questions are left blank for the filer, and `receiptNote` says so. |
 | `pge_fera` | web_submit | ❌ false | Live-walked and fully implemented against `energyinsight.pge.com/carefera` (real shadow-DOM selectors, confirmed working through the entire "Account Information" + "Confirmation" review screen). Held back from `verified: true` for one reason: the Confirmation page's own final "NEXT >" button was never clicked live, and a full text dump of that screen found no perjury/attestation/submit language anywhere — unusual for a benefits application, enough doubt to require a human to run one real `commit=true` pass and confirm what that click actually does before flipping this to `true`. |
 | `liheap_sfpes` | web_submit | ❌ false | Live-walked `caliheapapply.com` — blocked before reaching any application field. The site requires account registration with email confirmation (ASP.NET Core Identity default scaffold); no anonymous apply path exists. Needs either a Benefy-controlled mailbox to confirm a persistent session, or documented CSD/SFPES partner API access. |
 | `ca_lifeline` | web_submit | ❌ false | Live-walked `californialifeline.com` — hard Cloudflare block (error 1020) on every attempt, headless and headed. Independent research (the official paper application + CPUC's eligibility page) indicates new enrollment is PIN-gated and carrier-initiated anyway, not a single self-serve form — this may belong as `assisted` long-term rather than `web_submit`. |
@@ -83,6 +83,26 @@ All other programs (`calfresh`, `medi_cal_magi`, `ssi_ssp`, `capi`, `ihss`,
 no worker adapter exists or is planned; those stay on the existing
 prefill-sheet handoff (auth-walled portals, in-person steps, or
 lottery/informational pages, per the original apply-automation plan).
+
+## How caleitc was verified (positional field mapping)
+
+FTB 3514's AcroForm field names are opaque generator codes, so the usual
+"read the accessible name" approach doesn't work. The safe, non-guessing
+method used on 2026-07-11:
+
+1. Fetch the live PDF, and with `pdf-lib` fill **every** field with its own
+   id (e.g. field `3514_Form_1008` gets the text "1008").
+2. Render the pages to PNG (`pdftoppm`) and read each id straight off the
+   printed form by eye. This yields an observed id→box map — no proximity
+   heuristic, no guessing.
+3. Encode only the boxes we can fill truthfully from the profile (name +
+   the three qualifying-child columns) as named constants in the adapter.
+4. Fill with real test data, render again, and confirm every value lands in
+   the right box before setting `verified: true`.
+
+Because the ids are tied to this form revision, `TAX_YEAR` and `PDF_URL` in
+`caleitc.ts` move together — when FTB posts a new year's 3514, re-run steps
+1–4 against it before touching the year.
 
 ## How to verify a stub adapter
 

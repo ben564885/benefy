@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Geist, Geist_Mono, Dosis } from "next/font/google";
 import DevToolsMenuTransition from "@/components/DevToolsMenuTransition";
 import "./globals.css";
 
@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Editorial serif used for the benefits results (program names + dollar figures).
-const fraunces = Fraunces({
+// Rounded display sans used for the benefits results (program names + dollar figures).
+const dosis = Dosis({
   variable: "--font-display",
   subsets: ["latin"],
 });
@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${dosis.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col text-slate-900" suppressHydrationWarning>
         {children}

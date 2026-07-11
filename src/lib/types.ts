@@ -127,6 +127,13 @@ export interface ProgramDefinition {
     // lottery/informational page) — the user gets the existing prefill-sheet
     // handoff only. Defaults to "assisted" when omitted.
     apply_mode?: "web_submit" | "pdf_fill" | "assisted";
+    // True only when this program's worker adapter is verified end-to-end —
+    // it must match that adapter's `verified` flag (worker/src/adapters/).
+    // The results page offers real "Apply automatically" only for ready
+    // programs, and the apply API refuses to enqueue one without it, so an
+    // apply_mode of web_submit/pdf_fill whose adapter is still unverified is
+    // shown but not actually run. Defaults to false when omitted.
+    auto_apply_ready?: boolean;
     // ApplicationProfile / HouseholdMember keys (dot-path for household
     // members, e.g. "household_members[].ssn_encrypted") this program's
     // adapter needs beyond ClientProfile. Drives the apply flow's gap-fill
