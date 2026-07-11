@@ -67,7 +67,10 @@ async function processPdfJob(row: SubmissionRow): Promise<void> {
       });
     }
   } catch (err) {
-    await markStatus(row.id, "failed", { error: String(err) });
+    console.error(`submission ${row.id} (${row.program_id}) pdf_fill job threw`, err);
+    await markStatus(row.id, "failed", {
+      error: "Something went wrong filling this out automatically. Use the official form and apply yourself instead.",
+    });
   }
 }
 
@@ -112,7 +115,10 @@ async function processWebJob(row: SubmissionRow): Promise<void> {
       await markStatus(row.id, "awaiting_review", { newArtifacts: artifacts });
     }
   } catch (err) {
-    await markStatus(row.id, "failed", { error: String(err) });
+    console.error(`submission ${row.id} (${row.program_id}) web_submit job threw`, err);
+    await markStatus(row.id, "failed", {
+      error: "Something went wrong filling this out automatically. Use the official form and apply yourself instead.",
+    });
   } finally {
     await browser.close();
   }
@@ -145,7 +151,9 @@ async function loop(): Promise<void> {
         await processOne(row);
       } catch (err) {
         console.error(`submission ${row.id} failed`, err);
-        await markStatus(row.id, "failed", { error: String(err) }).catch(() => {});
+        await markStatus(row.id, "failed", {
+          error: "Something went wrong filling this out automatically. Use the official form and apply yourself instead.",
+        }).catch(() => {});
       }
     } else {
       await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));

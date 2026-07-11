@@ -330,7 +330,7 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
               <div>
                 <p className="text-sm font-medium text-slate-900">{programName(s.program_id)}</p>
                 <p className="text-xs text-slate-500">{STATUS_LABEL[s.status]}</p>
-                {s.status === "needs_human" && (
+                {(s.status === "needs_human" || s.status === "failed") && (
                   <p className="mt-1 text-xs text-amber-700">
                     {s.error ?? "We couldn't finish this one automatically."} Nothing was submitted — you can
                     still apply yourself.
@@ -341,7 +341,7 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {s.status === "needs_human" && programFormUrl(s.program_id) && (
+                {(s.status === "needs_human" || s.status === "failed") && programFormUrl(s.program_id) && (
                   <a
                     href={programFormUrl(s.program_id)}
                     target="_blank"
