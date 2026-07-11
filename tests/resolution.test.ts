@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { screenClient } from "@/lib/engine";
-import { buildResolutionDelta, buildResolutionQuestion } from "@/lib/gradient/resolutionAgent";
+import {
+  buildResolutionDelta,
+  buildResolutionQuestion,
+  buildResolveAllOpening,
+  nextResolvableTarget,
+} from "@/lib/gradient/resolutionAgent";
+import { routeTurn } from "@/lib/gradient/router";
 import type { ClientProfile } from "@/lib/types";
 
 function makeProfile(overrides: Partial<ClientProfile> = {}): ClientProfile {
@@ -121,6 +127,38 @@ describe("resolution delta builder", () => {
     const delta = buildResolutionDelta(before, before, target.program_id);
     expect(delta.resolved).toBe(false);
     expect(delta.continueResolving).toBe(false);
+  });
+
+  it("routes resolve-intent messages to the resolution loop, not the model", () => {
+    expect(routeTurn("ask me all the questions to resolve the unresolved", true, 3)).toBe("resolve");
+    expect(routeTurn("let's finish the screening questions", true, 2)).toBe("resolve");
+    // No needs-review items → nothing to resolve, normal routing applies.
+    expect(routeTurn("ask me all the questions to resolve the unresolved", true, 0)).toBe("intake");
+    // No screening yet → intake.
+    expect(routeTurn("resolve everything", false, 0)).toBe("intake");
+    // Navigator questions still route to the navigator.
+    expect(routeTurn("why am I not eligible for CalFresh?", true, 0)).toBe("navigator");
+  });
+
+  it("opens resolve-all with a count preamble and the first resolvable question", () => {
+    const screening = screenClient(makeProfile({ immigration_status: "unknown" }));
+    const opening = buildResolveAllOpening(screening);
+    expect(opening.target).not.toBeNull();
+    expect(opening.target!.status).toBe("needs_review");
+    expect(opening.text).toContain(`${screening.needs_review_count} program(s) need review`);
+    expect(opening.text).toMatch(/immigration status/i);
+  });
+
+  it("chains to the next resolvable target, skipping manual income tests", () => {
+    const screening = screenClient(makeProfile({ immigration_status: "unknown", has_disability: true }));
+    const first = nextResolvableTarget(screening)!;
+    expect(first.status).toBe("needs_review");
+    expect(buildResolutionQuestion(first).resolvable).toBe(true);
+    const second = nextResolvableTarget(screening, first.program_id);
+    if (second) {
+      expect(second.program_id).not.toBe(first.program_id);
+      expect(buildResolutionQuestion(second).resolvable).toBe(true);
+    }
   });
 
   it("never uses guarantee language", () => {

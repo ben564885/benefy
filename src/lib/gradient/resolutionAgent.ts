@@ -186,8 +186,8 @@ export function buildResolutionDelta(
       const valueEn =
         r.status === "likely_eligible" ? ` (+$${r.estimated_annual_value.toLocaleString()}/yr)` : "";
       return lang === "es"
-        ? `• ${nameOf(r.program_id)}: ${labels[prev.status]} → ${labels[r.status]}${value}`
-        : `• ${nameOf(r.program_id)}: ${labels[prev.status]} → ${labels[r.status]}${valueEn}`;
+        ? `- ${nameOf(r.program_id)}: ${labels[prev.status]} → ${labels[r.status]}${value}`
+        : `- ${nameOf(r.program_id)}: ${labels[prev.status]} → ${labels[r.status]}${valueEn}`;
     });
     lines.push(
       (lang === "es" ? "Su respuesta también actualizó:" : "Your answer also updated:") +
@@ -209,6 +209,45 @@ export function buildResolutionDelta(
   lines.push(totalLine + potentialLine);
 
   return { text: lines.join("\n\n"), resolved, continueResolving };
+}
+
+// First needs_review program (optionally after the one just handled) that a
+// conversation could actually settle — used to chain the loop through every
+// amber card and to enter the loop from a "resolve the unresolved" message.
+export function nextResolvableTarget(
+  screening: ScreeningResult,
+  excludeProgramId?: string,
+  lang: Lang = "en",
+): EligibilityResult | null {
+  return (
+    screening.results.find(
+      (r) =>
+        r.program_id !== excludeProgramId &&
+        r.status === "needs_review" &&
+        buildResolutionQuestion(r, lang).resolvable,
+    ) ?? null
+  );
+}
+
+export function buildResolveAllOpening(
+  screening: ScreeningResult,
+  lang: Lang = "en",
+): { text: string; target: EligibilityResult | null } {
+  const target = nextResolvableTarget(screening, undefined, lang);
+  if (!target) {
+    return {
+      target: null,
+      text:
+        lang === "es"
+          ? "Los programas que quedan en revisión no se pueden resolver dentro de esta evaluación — sus pruebas de ingresos/activos requieren una determinación real. Vale la pena solicitarlos directamente; abra cada tarjeta ámbar para ver el enlace de solicitud."
+          : "The remaining needs-review programs can't be settled inside this screener — their income/asset tests need a real determination. They're worth applying to directly; open each amber card for its application link.",
+    };
+  }
+  const lead =
+    lang === "es"
+      ? `${screening.needs_review_count} programa(s) necesitan revisión — vamos uno por uno.`
+      : `${screening.needs_review_count} program(s) need review — let's go through them one at a time.`;
+  return { target, text: `${lead}\n\n${buildResolutionQuestion(target, lang).text}` };
 }
 
 function resolutionSystemPrompt(programName: string, reason: string): string {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOwnedClient } from "@/lib/auth";
 import { runGuidedIntakeTurn, runIntakeTurn } from "@/lib/gradient/intakeAgent";
 import { explainScreening } from "@/lib/gradient/navigatorAgent";
+import { buildResolveAllOpening } from "@/lib/gradient/resolutionAgent";
 import { routeTurn } from "@/lib/gradient/router";
 import { appendChatMessages, getTrace, setTrace, updateProfile } from "@/lib/store";
 import type { ChatMessage, TraceStep } from "@/lib/types";
@@ -57,15 +58,45 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     });
   }
 
-  const target = routeTurn(message, record.last_screening != null);
+  const target = routeTurn(
+    message,
+    record.last_screening != null,
+    record.last_screening?.needs_review_count ?? 0,
+  );
   trace.push({
     step: "router_decision",
     actor: "router",
-    detail: `Routed turn to the ${target === "intake" ? "Intake" : "Navigator"} agent.`,
+    detail:
+      target === "resolve"
+        ? "Resolve request detected — entering the needs-review resolution loop directly (no model call)."
+        : `Routed turn to the ${target === "intake" ? "Intake" : "Navigator"} agent.`,
     timestamp: new Date().toISOString(),
   });
 
   const userMessage: ChatMessage = { role: "user", content: message, timestamp: new Date().toISOString() };
+
+  // "Ask me the questions" / "resolve the unresolved": answer instantly with
+  // the first targeted question instead of round-tripping a model that would
+  // only paraphrase engine output back at the user. The client flips into
+  // resolution mode via resolve_target and subsequent answers hit /resolve.
+  if (target === "resolve" && record.last_screening) {
+    const opening = buildResolveAllOpening(record.last_screening, lang);
+    const assistantMessage: ChatMessage = {
+      role: "assistant",
+      content: opening.text,
+      timestamp: new Date().toISOString(),
+    };
+    await appendChatMessages(id, [userMessage, assistantMessage]);
+    await setTrace(id, trace);
+    return NextResponse.json({
+      target,
+      assistant_reply: opening.text,
+      resolve_target: opening.target ? { program_id: opening.target.program_id } : null,
+      mode: "local_fallback",
+      profile: record.profile,
+      trace,
+    });
+  }
 
   if (target === "navigator" && record.last_screening) {
     const explanation = await explainScreening(record.profile, record.last_screening, message, trace, id);

@@ -3,6 +3,7 @@ import { requireOwnedClient } from "@/lib/auth";
 import {
   buildResolutionDelta,
   buildResolutionQuestion,
+  nextResolvableTarget,
   runResolutionAnswerTurn,
 } from "@/lib/gradient/resolutionAgent";
 import { getProgram } from "@/lib/engine";
@@ -102,18 +103,32 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     timestamp: new Date().toISOString(),
   });
 
+  // Chain the loop: once this program is settled (or can't be settled),
+  // move straight to the next resolvable needs-review card so one "resolve"
+  // session walks every amber card without re-clicking.
+  let replyText = delta.text;
+  let resolvingProgramId: string | null = delta.continueResolving ? programId : null;
+  if (!resolvingProgramId) {
+    const next = nextResolvableTarget(updated.last_screening, programId, lang);
+    if (next) {
+      const lead = lang === "es" ? "Siguiente:" : "Next up:";
+      replyText += `\n\n${lead} ${buildResolutionQuestion(next, lang).text}`;
+      resolvingProgramId = next.program_id;
+    }
+  }
+
   const assistantMessage: ChatMessage = {
     role: "assistant",
-    content: delta.text,
+    content: replyText,
     timestamp: new Date().toISOString(),
   };
   await appendChatMessages(id, [userMessage, assistantMessage]);
   await setTrace(id, trace);
 
   return NextResponse.json({
-    assistant_reply: delta.text,
+    assistant_reply: replyText,
     resolved: delta.resolved,
-    continue_resolving: delta.continueResolving,
+    resolving_program_id: resolvingProgramId,
     mode,
     profile: updated.profile,
     screening: updated.last_screening,

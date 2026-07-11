@@ -164,7 +164,11 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
       }
       if (data.profile) setProfile(data.profile);
       if (data.screening) patchLatestResults(data.screening, data.trace ?? []);
-      if (!data.continue_resolving) setResolving(null);
+      // The server chains to the next needs-review program automatically —
+      // follow it, or exit resolution mode when nothing resolvable is left.
+      const nextId: string | null = data.resolving_program_id ?? null;
+      const nextProgram = nextId ? programs.find((p) => p.program_id === nextId) : undefined;
+      setResolving(nextProgram ? { programId: nextProgram.program_id, name: nextProgram.name } : null);
       return;
     }
 
@@ -187,6 +191,14 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
 
     const updatedProfile: ClientProfile = data.profile ?? profile;
     if (data.profile) setProfile(data.profile);
+
+    // "Resolve the unresolved" typed into the composer: the intake route
+    // answers with the first targeted question and hands us the program to
+    // enter resolution mode on.
+    if (data.resolve_target?.program_id) {
+      const program = programs.find((p) => p.program_id === data.resolve_target.program_id);
+      if (program) setResolving({ programId: program.program_id, name: program.name });
+    }
 
     if (!hasScreening && isReadyToScreen(updatedProfile)) {
       await runScreen();

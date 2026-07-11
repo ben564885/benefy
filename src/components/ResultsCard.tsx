@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
+import AgentMarkdown from "@/components/AgentMarkdown";
 import ProgramCard from "@/components/ProgramCard";
 import TraceView from "@/components/TraceView";
 
@@ -114,8 +115,8 @@ export default function ResultsCard({
 
       {explanation && (
         <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-slate-700 whitespace-pre-wrap">{explanation}</p>
+          <div className="text-sm text-slate-700">
+            <AgentMarkdown>{explanation}</AgentMarkdown>
           </div>
           {mode && (
             <span

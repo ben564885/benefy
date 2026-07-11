@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireOwnedClient } from "@/lib/auth";
 import { INTAKE_SYSTEM_PROMPT } from "@/lib/gradient/intakeAgent";
 import { UPDATE_PROFILE_TOOL } from "@/lib/gradient/tools";
+import { getChatHistory } from "@/lib/store";
+import type { ChatMessage, ClientRecord } from "@/lib/types";
 
 // Mints a short-lived OpenAI Realtime client secret so the browser can open
 // a WebRTC session directly with OpenAI — this route is the only place
@@ -29,6 +31,72 @@ const REALTIME_TOOLS = [
   },
 ];
 
+// Voice sessions don't start from scratch: if the person already answered
+// questions in text chat (or a previous call), the Realtime model gets that
+// state up front so it never re-asks for facts it already has. Instructions
+// are fixed at session-creation time, so this is a snapshot as of connect.
+const MAX_TRANSCRIPT_MESSAGES = 30;
+const MAX_MESSAGE_CHARS = 400;
+
+function buildSessionContext(record: ClientRecord, chatHistory: ChatMessage[]): string {
+  const parts: string[] = [];
+
+  const profileEntries = Object.entries(record.profile).filter(([key, value]) => {
+    if (key === "client_id" || key === "field_status" || key === "last_screened_at") return false;
+    if (value == null) return false;
+    if (typeof value === "string" && value.trim() === "") return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    return true;
+  });
+  if (profileEntries.length > 0) {
+    parts.push(
+      `Known profile so far (already collected — do NOT re-ask for any of these):\n${profileEntries
+        .map(([key, value]) => `- ${key}: ${JSON.stringify(value)}`)
+        .join("\n")}`,
+    );
+  }
+
+  const missing = (
+    [
+      ["household_size", record.profile.household_size != null],
+      [
+        "income (monthly or annual gross)",
+        record.profile.monthly_income_gross != null || record.profile.annual_income_gross != null,
+      ],
+      ["sf_resident", record.profile.sf_resident != null],
+      ["immigration_status", record.profile.immigration_status != null],
+    ] as const
+  )
+    .filter(([, known]) => !known)
+    .map(([label]) => label);
+  parts.push(
+    missing.length > 0
+      ? `Still needed before a screening can run: ${missing.join(", ")}. Focus the conversation on these.`
+      : "All required fields are already captured.",
+  );
+
+  if (record.last_screening) {
+    parts.push(
+      "An eligibility screening has already been run for this client. If they ask about results, call check_eligibility to get the current result rather than recalling it from memory.",
+    );
+  }
+
+  const recent = chatHistory.slice(-MAX_TRANSCRIPT_MESSAGES);
+  if (recent.length > 0) {
+    const transcript = recent
+      .map((m) => {
+        const content = m.content.length > MAX_MESSAGE_CHARS ? `${m.content.slice(0, MAX_MESSAGE_CHARS)}…` : m.content;
+        return `${m.role === "user" ? "Client" : "Assistant"}: ${content}`;
+      })
+      .join("\n");
+    parts.push(
+      `Earlier conversation with this client (from text chat — you were the assistant). Continue from where it left off; do not re-ask anything already answered here, and don't greet them like a stranger:\n${transcript}`,
+    );
+  }
+
+  return parts.join("\n\n");
+}
+
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -51,6 +119,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: owned.status === 403 ? 404 : owned.status });
   }
 
+  const chatHistory = await getChatHistory(clientId).catch(() => [] as ChatMessage[]);
+  const sessionContext = buildSessionContext(owned.record, chatHistory);
+
   const res = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
     method: "POST",
     headers: {
@@ -62,7 +133,7 @@ export async function POST(request: Request) {
         type: "realtime",
         model: REALTIME_MODEL,
         audio: { output: { voice: REALTIME_VOICE } },
-        instructions: `${INTAKE_SYSTEM_PROMPT}\n\nYou are on a live voice call, not text chat — keep replies short and conversational. The client_id for this session is "${clientId}"; you never need to ask for it or say it out loud.${
+        instructions: `${INTAKE_SYSTEM_PROMPT}\n\nYou are on a live voice call, not text chat — keep replies short and conversational. The client_id for this session is "${clientId}"; you never need to ask for it or say it out loud.\n\n${sessionContext}${
           lang === "es"
             ? "\n\nThis caller selected Spanish in the app. Conduct the ENTIRE call in Spanish — greet them, ask every question, and explain everything in natural, warm, plain-language Spanish. Only switch languages if the caller clearly asks you to."
             : ""
