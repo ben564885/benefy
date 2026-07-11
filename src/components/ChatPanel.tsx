@@ -131,11 +131,16 @@ export default function ChatPanel({
   const [sending, setSending] = useState(false);
   const [sendingGuided, setSendingGuided] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const firstScroll = useRef(true);
   const t = INTAKE_STRINGS[lang];
 
+  // Track the conversation: jump to the bottom on load, glide there on every
+  // new message / typing indicator so a sent message is always in view.
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: firstScroll.current ? "auto" : "smooth" });
+    firstScroll.current = false;
   }, [thread.length, sending, screeningLoading]);
 
   const missing = missingCoreFields(profile);
@@ -173,14 +178,16 @@ export default function ChatPanel({
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div
-        ref={scrollRef}
-        className={`flex flex-1 flex-col space-y-5 overflow-y-auto py-6 ${
-          thread.length === 0 ? "justify-center" : "justify-end"
-        }`}
-        style={{ minHeight: "24rem" }}
-      >
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto py-6">
+        {/* justify-* lives on this inner column, not the scroll container —
+            justify-end on a scrolling flexbox makes overflowing content at
+            the top unreachable in some browsers. */}
+        <div
+          className={`flex min-h-full flex-col space-y-5 ${
+            thread.length === 0 ? "justify-center" : "justify-end"
+          }`}
+        >
         {thread.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <h2 className="text-2xl font-semibold text-slate-900">{t.emptyTitle}</h2>
@@ -221,9 +228,10 @@ export default function ChatPanel({
             </div>
           </div>
         )}
+        </div>
       </div>
 
-      <div className="sticky bottom-0 flex flex-col gap-3 pt-4">
+      <div className="flex flex-col gap-3 pt-4">
         {resolving && (
           <div className="flex w-fit items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-medium text-amber-800">
             <span>{t.resolvingLabel(resolving.name)}</span>

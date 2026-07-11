@@ -215,7 +215,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex items-center gap-2 self-end">
         <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
           {LANGS.map((l) => (
