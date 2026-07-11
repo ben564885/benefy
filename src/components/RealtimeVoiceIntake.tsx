@@ -10,11 +10,6 @@ interface Props {
 
 type Status = "idle" | "connecting" | "connected" | "error";
 
-interface TranscriptLine {
-  role: "user" | "assistant";
-  text: string;
-}
-
 // OpenAI Realtime event payloads aren't hand-typed here — the WebRTC data
 // channel is a firehose of event types we only care about a handful of, and
 // the exact field nesting for the ones we do care about (function-call id,
@@ -36,8 +31,6 @@ type RealtimeEvent = Record<string, unknown> & {
 
 export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Props) {
   const [status, setStatus] = useState<Status>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [lines, setLines] = useState<TranscriptLine[]>([]);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
@@ -51,6 +44,7 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
   const meterRafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    connect();
     return () => disconnect();
   }, []);
 
@@ -80,17 +74,6 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
     localAnalyserRef.current = null;
     remoteAnalyserRef.current = null;
     setLevel(0);
-  }
-
-  function appendLine(role: "user" | "assistant", text: string) {
-    if (!text) return;
-    setLines((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && last.role === role) {
-        return [...prev.slice(0, -1), { role, text: last.text + text }];
-      }
-      return [...prev, { role, text }];
-    });
   }
 
   async function runTool(name: string, args: Record<string, unknown>) {
@@ -136,24 +119,12 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
         });
         break;
       }
-      case "conversation.item.input_audio_transcription.completed": {
-        const text = event.transcript ?? event.item?.transcript;
-        if (text) appendLine("user", text);
-        break;
-      }
-      case "response.output_audio_transcript.delta":
-      case "response.audio_transcript.delta": {
-        if (event.delta) appendLine("assistant", event.delta);
-        break;
-      }
       default:
         break;
     }
   }
 
   async function connect() {
-    setError(null);
-    setLines([]);
     setStatus("connecting");
     try {
       const sessionRes = await fetch("/api/realtime/session", {
@@ -217,8 +188,7 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
       if (!sdpRes.ok) throw new Error(`Realtime connection failed (${sdpRes.status})`);
       const answerSdp = await sdpRes.text();
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
-    } catch (err) {
-      setError((err as Error).message);
+    } catch {
       setStatus("error");
       disconnect();
     }
@@ -239,64 +209,15 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
   }
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col items-center gap-2 border-b border-slate-100 py-6">
-        <VoiceOrb status={status} level={level} />
-        <p className="text-xs text-slate-400">
-          {status === "connected"
-            ? "Listening…"
-            : status === "connecting"
-              ? "Connecting…"
-              : status === "error"
-                ? "Something went wrong"
-                : "Tap Start talking to begin"}
-        </p>
-      </div>
-      <div className="flex-1 space-y-3 overflow-y-auto p-5" style={{ minHeight: "14rem", maxHeight: "22rem" }}>
-        {lines.length === 0 && (
-          <p className="text-sm text-slate-400">
-            Voice intake (beta) — tap Start talking and describe your household out loud. Requires microphone access.
-          </p>
-        )}
-        {lines.map((l, i) => (
-          <div key={i} className={`flex ${l.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div
-              className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm ${
-                l.role === "user" ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-800"
-              }`}
-            >
-              {l.text}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-between gap-2 border-t border-slate-100 p-3">
-        <span className="truncate text-xs text-slate-400">
-          {status === "connected"
-            ? "Live"
-            : status === "connecting"
-              ? "Connecting…"
-              : status === "error"
-                ? error
-                : "Not connected"}
-        </span>
-        {status === "connected" ? (
-          <button
-            onClick={disconnect}
-            className="shrink-0 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-900"
-          >
-            End
-          </button>
-        ) : (
-          <button
-            onClick={connect}
-            disabled={status === "connecting"}
-            className="shrink-0 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-50"
-          >
-            {status === "connecting" ? "Connecting…" : "Start talking"}
-          </button>
-        )}
-      </div>
+    <div className="flex items-center justify-center" style={{ minHeight: "24rem" }}>
+      <button
+        type="button"
+        onClick={() => (status === "connected" ? disconnect() : status !== "connecting" && connect())}
+        aria-label={status === "connected" ? "End voice session" : "Start voice session"}
+        className="cursor-pointer rounded-full focus:outline-none"
+      >
+        <VoiceOrb status={status} level={level} size={200} />
+      </button>
     </div>
   );
 }
