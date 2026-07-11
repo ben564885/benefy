@@ -21,15 +21,15 @@ function LogoRow({
   speed: "animate-marquee-left" | "animate-marquee-right";
 }) {
   return (
-    <div className="relative h-20 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
-      <div className={`flex w-max items-center gap-10 ${speed}`}>
+    <div className="relative h-36 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
+      <div className={`flex w-max items-center gap-14 ${speed}`}>
         {[...logos, ...logos].map((logo, i) => (
-          <div key={`${logo.alt}-${i}`} className="flex h-20 w-20 shrink-0 items-center justify-center">
+          <div key={`${logo.alt}-${i}`} className="flex h-36 w-36 shrink-0 items-center justify-center">
             <Image
               src={logo.src}
               alt={logo.alt}
-              width={80}
-              height={80}
+              width={144}
+              height={144}
               className="h-full w-full object-contain drop-shadow-lg"
               unoptimized
             />
@@ -42,7 +42,7 @@ function LogoRow({
 
 export default function ProgramLogos() {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-8">
       <LogoRow logos={TOP_ROW} speed="animate-marquee-left" />
       <LogoRow logos={BOTTOM_ROW} speed="animate-marquee-right" />
     </div>
