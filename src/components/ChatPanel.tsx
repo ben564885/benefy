@@ -81,7 +81,7 @@ function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string, gui
 
   return (
     <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-slate-400">$</span>
+      <span className="text-sm font-semibold text-slate-600">$</span>
       <input
         type="number"
         inputMode="decimal"
@@ -90,9 +90,9 @@ function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string, gui
         onChange={(e) => setAmount(e.target.value)}
         disabled={disabled}
         placeholder="2,400"
-        className="w-28 rounded-full border border-slate-200 px-3.5 py-1.5 text-sm outline-none focus:border-teal-400 disabled:bg-slate-50"
+        className="w-28 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-teal-400 disabled:bg-slate-50"
       />
-      <div className="flex rounded-full border border-slate-200 p-0.5 text-xs">
+      <div className="flex rounded-full border border-slate-200 bg-white p-0.5 text-xs shadow-sm">
         <button
           type="button"
           onClick={() => setPeriod("month")}
