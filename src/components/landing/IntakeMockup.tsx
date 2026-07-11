@@ -21,15 +21,15 @@ export default function IntakeMockup() {
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2">
               <span className="font-bold text-white">CalFresh</span>
-              <span className="text-xs font-bold text-emerald-300">Likely eligible</span>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400" />
             </div>
             <div className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2">
               <span className="font-bold text-white">PG&amp;E CARE</span>
-              <span className="text-xs font-bold text-emerald-300">Likely eligible</span>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400" />
             </div>
             <div className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2">
               <span className="font-bold text-white">SFMTA Lifeline</span>
-              <span className="text-xs font-bold text-amber-300">Needs review</span>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-amber-400" />
             </div>
           </div>
         </div>
