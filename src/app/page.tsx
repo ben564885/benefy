@@ -1,26 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import IntakeMockup from "@/components/landing/IntakeMockup";
+import ProgramLogos from "@/components/landing/ProgramLogos";
+import AnimatedStat from "@/components/landing/AnimatedStat";
+import HowItWorksSteps from "@/components/landing/HowItWorksSteps";
 import StartScreeningButton from "@/components/StartScreeningButton";
-
-const PROGRAM_TABLE = [
-  {
-    name: "CalFresh",
-    logo: { src: "/logos/calfresh.jpg", alt: "CalFresh" },
-    description: "Monthly grocery assistance based on household size and income.",
-    highlight: true,
-  },
-  {
-    name: "PG&E CARE",
-    logo: { src: "/logos/pge.svg", alt: "PG&E" },
-    description: "A discounted rate on your monthly gas and electric bill.",
-  },
-  {
-    name: "SFMTA Lifeline",
-    logo: { src: "/logos/muni.svg", alt: "SFMTA Muni" },
-    description: "Reduced-fare Muni passes for qualifying San Francisco residents.",
-  },
-];
 
 const STEPS = [
   {
@@ -42,9 +25,9 @@ const STEPS = [
 ];
 
 const STATS = [
-  { value: "3", label: "SF/CA benefit programs screened" },
-  { value: "12", label: "Deterministic engine test cases" },
-  { value: "0", label: "Eligibility calls made by the AI" },
+  { value: "62,000", label: "People in SF & Marin eligible for CalFresh who don't use it" },
+  { value: "$3.5B", label: "In food assistance funding wasted each year" },
+  { value: "49%", label: "Of eligible seniors don't get their SSI benefits" },
 ];
 
 export default function HomePage() {
@@ -76,12 +59,6 @@ export default function HomePage() {
           <nav className="hidden items-center gap-8 text-sm font-bold text-white md:flex">
             <a href="#how-it-works" className="hover:text-white/70">
               How it works
-            </a>
-            <a href="#trust" className="hover:text-white/70">
-              Trust &amp; guardrails
-            </a>
-            <a href="#programs" className="hover:text-white/70">
-              Programs
             </a>
           </nav>
         </div>
@@ -124,44 +101,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <IntakeMockup />
-        </div>
-      </section>
-
-      <section id="programs" className="mx-auto w-full max-w-4xl px-6 pb-24">
-        <div className="mb-10 text-center">
-          <p className="text-sm font-bold uppercase tracking-wide text-white">Programs</p>
-          <h2 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
-            Tailored to your household
-          </h2>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-white/20 shadow-sm">
-          {PROGRAM_TABLE.map((program, i) => (
-            <div
-              key={program.name}
-              className={`flex flex-col items-start gap-4 px-6 py-5 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between ${
-                i > 0 ? "border-t border-white/20" : ""
-              } ${program.highlight ? "bg-amber-400/20" : "bg-white/10"}`}
-            >
-              <div className="flex items-center gap-3 sm:w-40 sm:shrink-0">
-                <Image
-                  src={program.logo.src}
-                  alt={program.logo.alt}
-                  width={40}
-                  height={16}
-                  className="h-4 w-auto"
-                  unoptimized
-                />
-                <span className="font-bold text-white">{program.name}</span>
-              </div>
-              <p className="flex-1 text-sm font-bold text-white">{program.description}</p>
-              <StartScreeningButton
-                label="Check eligibility →"
-                className="shrink-0 rounded-full border border-white px-4 py-1.5 text-xs font-bold text-white transition hover:bg-white hover:text-teal-800"
-              />
-            </div>
-          ))}
+          <ProgramLogos />
         </div>
       </section>
 
@@ -174,81 +114,14 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, i) => (
-              <div
-                key={step.title}
-                className="rounded-xl border border-white/20 bg-white/10 p-6 shadow-sm backdrop-blur-sm"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white">
-                  {i + 1}
-                </span>
-                <h3 className="mt-4 text-base font-bold text-white">{step.title}</h3>
-                <p className="mt-2 text-sm font-bold text-white">{step.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="trust" className="py-24">
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-12 px-6 lg:grid-cols-2 lg:items-center">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-white">
-              Trust &amp; guardrails
-            </p>
-            <h2 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
-              The AI never decides eligibility.
-            </h2>
-            <p className="mt-4 text-base font-bold text-white">
-              A pure, unit-tested rules engine is the only code path that ever returns
-              likely-eligible, likely-ineligible, or needs-review. The agent gathers information
-              and explains results — the yes/no always comes from the function call, never the
-              model.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {[
-              {
-                title: "Deterministic engine",
-                body: "Same input always yields the same output, checked against real 2026 program thresholds.",
-              },
-              {
-                title: "Human-in-the-loop review",
-                body: "Uncertain cases are flagged for review, never auto-approved.",
-              },
-              {
-                title: "Full reasoning trace",
-                body: "Every screening keeps a \"view reasoning\" trace so decisions stay auditable.",
-              },
-              {
-                title: "Guarantee-language guardrails",
-                body: "Agent output is checked for over-promising phrasing before you ever see it.",
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="flex gap-4 rounded-xl border border-white/20 bg-white/10 p-5 shadow-sm backdrop-blur-sm"
-              >
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-white" />
-                <div>
-                  <h3 className="text-sm font-bold text-white">{item.title}</h3>
-                  <p className="mt-1 text-sm font-bold text-white">{item.body}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <HowItWorksSteps steps={STEPS} />
         </div>
       </section>
 
       <section className="border-t border-white/20 py-16 backdrop-blur-sm">
         <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-8 px-6 text-center sm:grid-cols-3">
           {STATS.map((stat) => (
-            <div key={stat.label}>
-              <p className="text-4xl font-bold text-white">{stat.value}</p>
-              <p className="mt-2 text-sm font-bold text-white">{stat.label}</p>
-            </div>
+            <AnimatedStat key={stat.label} value={stat.value} label={stat.label} />
           ))}
         </div>
       </section>
