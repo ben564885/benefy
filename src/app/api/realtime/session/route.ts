@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireOwnedClient } from "@/lib/auth";
 import { INTAKE_SYSTEM_PROMPT } from "@/lib/gradient/intakeAgent";
 import { UPDATE_PROFILE_TOOL } from "@/lib/gradient/tools";
 
@@ -41,6 +42,12 @@ export async function POST(request: Request) {
   const clientId: string | undefined = body.client_id;
   if (!clientId) {
     return NextResponse.json({ error: "client_id is required" }, { status: 400 });
+  }
+
+  const owned = await requireOwnedClient(clientId);
+  if (!owned.ok) {
+    const message = owned.status === 401 ? "Not authenticated" : "Client not found";
+    return NextResponse.json({ error: message }, { status: owned.status === 403 ? 404 : owned.status });
   }
 
   const res = await fetch("https://api.openai.com/v1/realtime/client_secrets", {

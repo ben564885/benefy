@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createBrowserSupabaseClient } from "@/lib/supabase-auth/browserClient";
 
 interface Props {
   className?: string;
@@ -16,7 +17,20 @@ export default function StartScreeningButton({ className, label = "Check what I 
   async function handleClick() {
     setLoading(true);
     try {
-      const res = await fetch("/api/clients", { method: "POST", body: JSON.stringify({ display_name: "You" }) });
+      const supabase = createBrowserSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/login?next=start");
+        return;
+      }
+
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: "You" }),
+      });
       const data = await res.json();
       router.push(`/clients/${data.client.profile.client_id}`);
     } finally {

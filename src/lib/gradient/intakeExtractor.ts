@@ -116,6 +116,12 @@ export function extractProfilePatch(
   if (/\bdisab(led|ility)\b|\bssdi\b/.test(lower)) {
     patch.has_disability = true;
   }
+  if (/\bno one\b.*\bsenior\b|\bnot a senior\b|\bno seniors?\b/.test(lower) && !hasSeniorAge) {
+    patch.has_senior = false;
+  }
+  if (/\bno one\b.*\bdisabilit|\bnot disabled\b|\bwithout a disability\b/.test(lower)) {
+    patch.has_disability = false;
+  }
 
   // --- Immigration status ---
   if (/\bcitizen\b/.test(lower) && !/non-?citizen/.test(lower)) {
@@ -128,7 +134,7 @@ export function extractProfilePatch(
     )
   ) {
     patch.immigration_status = "unknown" as ImmigrationStatus;
-  } else if (/\bundocumented\b|\bvisa\b|\bnon-?citizen\b/.test(lower)) {
+  } else if (/\bundocumented\b|\bvisa\b|\bnon-?citizen\b|\bother\b.*(status|immigration)/.test(lower)) {
     patch.immigration_status = "other" as ImmigrationStatus;
   }
 

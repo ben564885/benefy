@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server";
+import { requireOwnedClient } from "@/lib/auth";
 import { runIntakeTurn } from "@/lib/gradient/intakeAgent";
 import { explainScreening } from "@/lib/gradient/navigatorAgent";
 import { routeTurn } from "@/lib/gradient/router";
-import {
-  appendChatMessages,
-  getClient,
-  getTrace,
-  setTrace,
-  updateProfile,
-} from "@/lib/store";
+import { appendChatMessages, getTrace, setTrace, updateProfile } from "@/lib/store";
 import type { ChatMessage, TraceStep } from "@/lib/types";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const record = await getClient(id);
-  if (!record) {
-    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  const owned = await requireOwnedClient(id);
+  if (!owned.ok) {
+    const message = owned.status === 401 ? "Not authenticated" : "Client not found";
+    return NextResponse.json({ error: message }, { status: owned.status === 403 ? 404 : owned.status });
   }
+  const record = owned.record;
 
   const body = await request.json().catch(() => ({}));
   const message: string = body.message ?? "";

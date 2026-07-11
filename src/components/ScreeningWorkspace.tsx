@@ -146,7 +146,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
               </button>
             </div>
             {intakeMode === "text" ? (
-              <ChatPanel messages={chat} onSend={handleSend} />
+              <ChatPanel messages={chat} profile={profile} onSend={handleSend} />
             ) : (
               <RealtimeVoiceIntake clientId={clientId} onProfileUpdated={refreshRecord} />
             )}

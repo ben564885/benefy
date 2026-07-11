@@ -31,3 +31,9 @@ services:
         scope: RUN_TIME
         type: SECRET
         value: "REPLACED_AT_DEPLOY_TIME"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        scope: RUN_AND_BUILD_TIME
+        value: "REPLACED_AT_DEPLOY_TIME"
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        scope: RUN_AND_BUILD_TIME
+        value: "REPLACED_AT_DEPLOY_TIME"

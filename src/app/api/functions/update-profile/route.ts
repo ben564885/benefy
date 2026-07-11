@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkFunctionAuth } from "@/lib/functionAuth";
-import { createClient, getClient, updateProfile } from "@/lib/store";
+import { getClient, updateProfile } from "@/lib/store";
 import type { ClientProfile, ImmigrationStatus } from "@/lib/types";
 
 const REQUIRED_KEYS: (keyof ClientProfile)[] = [
@@ -34,25 +34,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "client_id is required" }, { status: 400 });
   }
 
-  let record = await getClient(clientId);
+  // No auto-create here: every client_id now has an owning user (see
+  // supabase/002_auth.sql), created through the authenticated web/voice
+  // intake flow — this DO Function relay only ever updates an existing,
+  // already-owned row.
+  const record = await getClient(clientId);
   if (!record) {
-    record = await createClient({
-      client_id: clientId,
-      display_name: body.display_name || clientId,
-      household_size: null,
-      monthly_income_gross: null,
-      annual_income_gross: null,
-      member_ages: [],
-      has_senior: null,
-      has_disability: null,
-      immigration_status: null,
-      sf_resident: null,
-      zip_code: null,
-      current_programs: [],
-      intake_notes: "",
-      field_status: {},
-      last_screened_at: null,
-    });
+    return NextResponse.json({ error: "Client not found" }, { status: 404 });
   }
 
   const patch: Partial<ClientProfile> = {};

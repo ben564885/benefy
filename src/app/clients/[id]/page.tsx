@@ -1,15 +1,21 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { requireOwnedClient } from "@/lib/auth";
 import { getAllPrograms } from "@/lib/engine";
-import { getChatHistory, getClient, getTrace } from "@/lib/store";
+import { getChatHistory, getTrace } from "@/lib/store";
 import ScreeningWorkspace from "@/components/ScreeningWorkspace";
+import SignOutButton from "@/components/SignOutButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const record = await getClient(id);
-  if (!record) notFound();
+  const owned = await requireOwnedClient(id);
+  if (!owned.ok) {
+    if (owned.status === 401) redirect(`/login?next=/clients/${id}`);
+    notFound();
+  }
+  const record = owned.record;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
@@ -21,6 +27,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           <h1 className="mt-1 text-2xl font-semibold text-slate-900">Your benefits screening</h1>
           <p className="text-sm text-slate-500">{record.profile.zip_code ?? "No ZIP on file yet"}</p>
         </div>
+        <SignOutButton />
       </div>
 
       <ScreeningWorkspace

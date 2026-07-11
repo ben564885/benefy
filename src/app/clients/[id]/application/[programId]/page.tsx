@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { requireOwnedClient } from "@/lib/auth";
 import { buildPrefill } from "@/lib/applicationPrefill";
-import { getClient } from "@/lib/store";
 import PrintButton from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +12,11 @@ export default async function ApplicationPage({
   params: Promise<{ id: string; programId: string }>;
 }) {
   const { id, programId } = await params;
-  const record = await getClient(id);
-  if (!record) notFound();
+  const owned = await requireOwnedClient(id);
+  if (!owned.ok) {
+    if (owned.status === 401) redirect(`/login?next=/clients/${id}/application/${programId}`);
+    notFound();
+  }
 
   const outcome = await buildPrefill(id, programId);
 

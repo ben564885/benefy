@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
-import { getClient, getTrace, screenAndStore, setTrace, updateProfile } from "@/lib/store";
+import { requireOwnedClient } from "@/lib/auth";
+import { getTrace, screenAndStore, setTrace, updateProfile } from "@/lib/store";
 import type { ClientProfile, TraceStep } from "@/lib/types";
 
 // The browser calls this whenever the OpenAI Realtime voice session emits a
 // function call (update_client_profile / check_eligibility) — see
-// RealtimeVoiceIntake.tsx. No shared-secret auth here, matching the existing
-// /api/clients/[id]/intake route: both are called directly by the
-// unauthenticated browser session for this demo app (no accounts, no PII
-// storage beyond what's already in Supabase).
+// RealtimeVoiceIntake.tsx.
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const record = await getClient(id);
-  if (!record) {
-    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  const owned = await requireOwnedClient(id);
+  if (!owned.ok) {
+    const message = owned.status === 401 ? "Not authenticated" : "Client not found";
+    return NextResponse.json({ error: message }, { status: owned.status === 403 ? 404 : owned.status });
   }
 
   const body = await request.json().catch(() => ({}));

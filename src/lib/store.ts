@@ -26,6 +26,7 @@ export interface ClientRow {
   last_screening: ClientRecord["last_screening"];
   chat_history: ChatMessage[];
   trace: TraceStep[];
+  user_id: string | null;
 }
 
 // supabase-js's generic Database inference collapses to `never` for
@@ -77,7 +78,9 @@ function rowToRecord(row: ClientRow): ClientRecord {
   return { profile, last_screening };
 }
 
-function profileToRow(profile: ClientProfile): Omit<ClientRow, "last_screening" | "chat_history" | "trace"> {
+function profileToRow(
+  profile: ClientProfile,
+): Omit<ClientRow, "last_screening" | "chat_history" | "trace" | "user_id"> {
   return {
     client_id: profile.client_id,
     display_name: profile.display_name,
@@ -97,12 +100,23 @@ function profileToRow(profile: ClientProfile): Omit<ClientRow, "last_screening" 
   };
 }
 
-export async function listClients(): Promise<ClientRecord[]> {
+export async function listClientsForUser(userId: string): Promise<ClientRecord[]> {
   const { data, error } = await clientsTable()
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data as unknown as ClientRow[]).map(rowToRecord);
+}
+
+// No auth check here — this is a raw ownership lookup, meant to be called
+// by src/lib/auth.ts's requireOwnedClient() before any other store function
+// runs. Every other function in this file trusts that the caller has
+// already verified the requesting user owns clientId.
+export async function getClientOwnerId(clientId: string): Promise<string | null> {
+  const { data, error } = await clientsTable().select("user_id").eq("client_id", clientId).maybeSingle();
+  if (error) throw error;
+  return data?.user_id ?? null;
 }
 
 export async function getClient(clientId: string): Promise<ClientRecord | undefined> {
@@ -114,9 +128,9 @@ export async function getClient(clientId: string): Promise<ClientRecord | undefi
   return data ? rowToRecord(data as unknown as ClientRow) : undefined;
 }
 
-export async function createClient(profile: ClientProfile): Promise<ClientRecord> {
+export async function createClient(profile: ClientProfile, userId: string): Promise<ClientRecord> {
   const { data, error } = await clientsTable()
-    .insert({ ...profileToRow(profile), last_screening: null, chat_history: [], trace: [] })
+    .insert({ ...profileToRow(profile), user_id: userId, last_screening: null, chat_history: [], trace: [] })
     .select("*")
     .single();
   if (error) throw error;
@@ -181,11 +195,6 @@ export async function getTrace(clientId: string): Promise<TraceStep[]> {
 export async function setTrace(clientId: string, trace: TraceStep[]): Promise<void> {
   const { error } = await clientsTable().update({ trace }).eq("client_id", clientId);
   if (error) throw error;
-}
-
-export async function caseloadTotal(): Promise<number> {
-  const clients = await listClients();
-  return clients.reduce((sum, r) => sum + (r.last_screening?.total_estimated_annual_value ?? 0), 0);
 }
 
 export function nextClientId(): string {
