@@ -43,6 +43,7 @@ export async function POST(request: Request) {
   if (!clientId) {
     return NextResponse.json({ error: "client_id is required" }, { status: 400 });
   }
+  const lang: "en" | "es" = body.lang === "es" ? "es" : "en";
 
   const owned = await requireOwnedClient(clientId);
   if (!owned.ok) {
@@ -61,7 +62,11 @@ export async function POST(request: Request) {
         type: "realtime",
         model: REALTIME_MODEL,
         audio: { output: { voice: REALTIME_VOICE } },
-        instructions: `${INTAKE_SYSTEM_PROMPT}\n\nYou are on a live voice call, not text chat — keep replies short and conversational. The client_id for this session is "${clientId}"; you never need to ask for it or say it out loud.`,
+        instructions: `${INTAKE_SYSTEM_PROMPT}\n\nYou are on a live voice call, not text chat — keep replies short and conversational. The client_id for this session is "${clientId}"; you never need to ask for it or say it out loud.${
+          lang === "es"
+            ? "\n\nThis caller selected Spanish in the app. Conduct the ENTIRE call in Spanish — greet them, ask every question, and explain everything in natural, warm, plain-language Spanish. Only switch languages if the caller clearly asks you to."
+            : ""
+        }`,
         tools: REALTIME_TOOLS,
       },
     }),

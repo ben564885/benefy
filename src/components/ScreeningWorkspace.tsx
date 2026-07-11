@@ -220,7 +220,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
           screeningLoading={screeningLoading}
         />
       ) : (
-        <RealtimeVoiceIntake clientId={clientId} onProfileUpdated={refreshRecord} />
+        <RealtimeVoiceIntake clientId={clientId} lang={lang} onProfileUpdated={refreshRecord} />
       )}
     </div>
   );

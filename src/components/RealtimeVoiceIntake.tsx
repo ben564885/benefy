@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import VoiceOrb from "@/components/VoiceOrb";
+import type { Lang } from "@/lib/i18n";
 
 interface Props {
   clientId: string;
+  lang?: Lang;
   onProfileUpdated: () => void;
 }
 
@@ -29,7 +31,7 @@ type RealtimeEvent = Record<string, unknown> & {
   };
 };
 
-export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Props) {
+export default function RealtimeVoiceIntake({ clientId, lang = "en", onProfileUpdated }: Props) {
   const [status, setStatus] = useState<Status>("idle");
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -43,10 +45,14 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
   const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
   const meterRafRef = useRef<number | null>(null);
 
+  // Session instructions (including which language to speak) are fixed at
+  // session-creation time, so a language switch mid-call reconnects with a
+  // fresh session rather than talking past the setting.
   useEffect(() => {
     connect();
     return () => disconnect();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   function startMeter() {
     const meterData = new Uint8Array(64);
@@ -130,7 +136,7 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
       const sessionRes = await fetch("/api/realtime/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ client_id: clientId }),
+        body: JSON.stringify({ client_id: clientId, lang }),
       });
       const sessionData = await sessionRes.json();
       if (!sessionRes.ok) throw new Error(sessionData.error || "Could not start voice session");
