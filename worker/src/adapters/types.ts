@@ -77,6 +77,10 @@ export interface WebAdapter {
 export interface PdfFillOutcome {
   pdfBytes: Uint8Array;
   unfillable: string[];
+  // Program-specific "what to do with this PDF" note shown to the user on
+  // the submitted row. Optional — processPdfJob falls back to a generic
+  // "download, sign, submit" line when an adapter doesn't set one.
+  receiptNote?: string;
 }
 
 export interface PdfAdapter {

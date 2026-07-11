@@ -21,10 +21,19 @@ async function uploadScreenshots(
   return out;
 }
 
+// Anything written to a submission's `error` is rendered verbatim to the
+// applicant in ApplyPanel's "Needs your attention" block — write for them,
+// not for us. No program_ids, no adapter internals, no exception text.
+// Reaching this at all means a row was enqueued for a program with no
+// usable adapter (e.g. a row queued before the program moved to "assisted"),
+// which the apply API route is supposed to prevent.
+const NO_AUTOMATION_MESSAGE =
+  "This program can't be applied for automatically — use the prefilled draft and submit it yourself.";
+
 async function processPdfJob(row: SubmissionRow): Promise<void> {
   const adapter = getAdapter(row.program_id);
   if (!adapter || adapter.kind !== "pdf_fill") {
-    await markStatus(row.id, "needs_human", { error: `No pdf_fill adapter registered for ${row.program_id}` });
+    await markStatus(row.id, "needs_human", { error: NO_AUTOMATION_MESSAGE });
     return;
   }
   if (!adapter.verified) {
@@ -36,7 +45,7 @@ async function processPdfJob(row: SubmissionRow): Promise<void> {
   await markStatus(row.id, "filling");
   try {
     const data = await fetchApplicantData(row.client_id, row.program_id);
-    const { pdfBytes, unfillable } = await adapter.fill(data);
+    const { pdfBytes, unfillable, receiptNote } = await adapter.fill(data);
     const url = await saveArtifact(
       row.client_id,
       row.id,
@@ -52,7 +61,8 @@ async function processPdfJob(row: SubmissionRow): Promise<void> {
       });
     } else {
       await markStatus(row.id, "submitted", {
-        receipt_note: "PDF generated — download, review, sign, and submit per the program's own instructions.",
+        receipt_note:
+          receiptNote ?? "PDF generated — download, review, sign, and submit per the program's own instructions.",
         newArtifacts: artifacts,
       });
     }
@@ -64,7 +74,7 @@ async function processPdfJob(row: SubmissionRow): Promise<void> {
 async function processWebJob(row: SubmissionRow): Promise<void> {
   const adapter = getAdapter(row.program_id);
   if (!adapter || adapter.kind !== "web_submit") {
-    await markStatus(row.id, "needs_human", { error: `No web_submit adapter registered for ${row.program_id}` });
+    await markStatus(row.id, "needs_human", { error: NO_AUTOMATION_MESSAGE });
     return;
   }
 

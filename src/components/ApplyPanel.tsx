@@ -46,13 +46,16 @@ const CONSENT_TEXT =
   "By continuing, you authorize Benefy to fill out and, for programs marked \"auto-submit,\" submit these applications on your behalf using the information in your profile. Nothing is ever submitted without you reviewing a filled draft first and tapping Confirm.";
 
 export default function ApplyPanel({ clientId, screening, programs }: Props) {
-  const automatable = programs.filter((p) => {
+  const likelyEligible = programs.filter((p) => {
     const result = screening.results.find((r) => r.program_id === p.program_id);
-    const mode = p.application.apply_mode;
-    return result?.status === "likely_eligible" && (mode === "web_submit" || mode === "pdf_fill");
+    return result?.status === "likely_eligible";
   });
+  // ready: we can fill/submit end-to-end (verified adapter). manual: shown so
+  // the list feels complete, but the user applies for these themselves.
+  const ready = likelyEligible.filter((p) => p.application.auto_apply_ready);
+  const manual = likelyEligible.filter((p) => !p.application.auto_apply_ready);
 
-  const [selected, setSelected] = useState<Set<string>>(new Set(automatable.map((p) => p.program_id)));
+  const [selected, setSelected] = useState<Set<string>>(new Set(ready.map((p) => p.program_id)));
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"select" | "consent" | "gaps">("select");
   const [consentChecked, setConsentChecked] = useState(false);
@@ -83,7 +86,7 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
     return () => clearInterval(id);
   }, [submissions, clientId]);
 
-  if (automatable.length === 0) return null;
+  if (likelyEligible.length === 0) return null;
 
   function toggle(programId: string) {
     setSelected((prev) => {
@@ -168,23 +171,29 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
   }
 
   const programName = (id: string) => programs.find((p) => p.program_id === id)?.name ?? id;
+  const programFormUrl = (id: string) => programs.find((p) => p.program_id === id)?.application.form_url;
   const hasTransUnionProgram = Array.from(selected).includes("sfpuc_cap");
 
   return (
-    <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-5">
-      <div className="flex items-center justify-between gap-3">
+    <div className="rounded-2xl border-2 border-teal-300 bg-teal-50 p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Apply automatically</h3>
-          <p className="text-xs text-slate-600">
-            {automatable.length} of your likely-eligible programs can be filled out for you — you review before
-            anything is sent.
+          <h3 className="font-display text-xl font-semibold text-slate-900">
+            Let Benefy apply for you
+          </h3>
+          <p className="mt-1 text-sm text-slate-600">
+            {ready.length > 0
+              ? `We'll fill out ${ready.length} of your likely-eligible ${
+                  ready.length === 1 ? "application" : "applications"
+                } — you review before anything is sent.`
+              : "None of your eligible programs support automatic apply yet — we'll hand you a prefilled draft for each to finish yourself."}
           </p>
         </div>
         <button
           onClick={togglePanel}
-          className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-teal-800"
+          className="shrink-0 rounded-full bg-teal-700 px-6 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-teal-800"
         >
-          {open ? "Close" : "Start"}
+          {open ? "Close" : "Apply automatically →"}
         </button>
       </div>
 
@@ -196,7 +205,7 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
             <>
               <p className="mb-2 text-xs font-semibold text-slate-700">Which programs?</p>
               <div className="space-y-2">
-                {automatable.map((p) => (
+                {ready.map((p) => (
                   <label key={p.program_id} className="flex items-center gap-2 text-sm text-slate-700">
                     <input
                       type="checkbox"
@@ -210,14 +219,33 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
                     </span>
                   </label>
                 ))}
+                {manual.map((p) => (
+                  <div key={p.program_id} className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                    <input type="checkbox" checked={false} disabled readOnly className="h-4 w-4" />
+                    {p.name}
+                    <span className="text-[11px]">{"— you'll apply for this yourself"}</span>
+                    {p.application.form_url && (
+                      <a
+                        href={p.application.form_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-medium text-teal-700 hover:underline"
+                      >
+                        Open form ↗
+                      </a>
+                    )}
+                  </div>
+                ))}
               </div>
-              <button
-                disabled={selected.size === 0}
-                onClick={() => setStep("consent")}
-                className="mt-4 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-teal-800 disabled:opacity-50"
-              >
-                Continue
-              </button>
+              {ready.length > 0 && (
+                <button
+                  disabled={selected.size === 0}
+                  onClick={() => setStep("consent")}
+                  className="mt-4 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-teal-800 disabled:opacity-50"
+                >
+                  Continue
+                </button>
+              )}
             </>
           )}
 
@@ -302,12 +330,27 @@ export default function ApplyPanel({ clientId, screening, programs }: Props) {
               <div>
                 <p className="text-sm font-medium text-slate-900">{programName(s.program_id)}</p>
                 <p className="text-xs text-slate-500">{STATUS_LABEL[s.status]}</p>
-                {s.status === "needs_human" && s.error && <p className="mt-1 text-xs text-amber-700">{s.error}</p>}
+                {s.status === "needs_human" && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    {s.error ?? "We couldn't finish this one automatically."} Nothing was submitted — you can
+                    still apply yourself.
+                  </p>
+                )}
                 {s.status === "submitted" && s.receipt_note && (
                   <p className="mt-1 text-xs text-emerald-700">{s.receipt_note}</p>
                 )}
               </div>
               <div className="flex items-center gap-2">
+                {s.status === "needs_human" && programFormUrl(s.program_id) && (
+                  <a
+                    href={programFormUrl(s.program_id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Apply yourself ↗
+                  </a>
+                )}
                 {s.artifacts.length > 0 && (
                   <a
                     href={s.artifacts[s.artifacts.length - 1].url}

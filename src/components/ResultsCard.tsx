@@ -23,7 +23,7 @@ interface Props {
   onRecheck?: () => void;
 }
 
-export default function ResultsCard({ clientId, screening, programs, trace, onResolve, onRecheck }: Props) {
+export default function ResultsCard({ clientId, screening, programs, trace, onRecheck }: Props) {
   const [showTrace, setShowTrace] = useState(false);
   const [showIneligible, setShowIneligible] = useState(false);
   const programName = (id: string) => programs.find((p) => p.program_id === id)?.name ?? id;
@@ -36,7 +36,7 @@ export default function ResultsCard({ clientId, screening, programs, trace, onRe
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 p-6 text-center">
+      <div className="rounded-xl p-6 text-center">
         <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Estimated benefits surfaced</p>
         <p className="mt-1 text-4xl font-bold text-emerald-800">
           {formatMoney(screening.total_estimated_annual_value)}
@@ -54,24 +54,23 @@ export default function ResultsCard({ clientId, screening, programs, trace, onRe
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ApplyPanel clientId={clientId} screening={screening} programs={programs} />
+
+      <div className="results-carousel -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3">
         {shownResults.map((r, i) => (
           <div
             key={r.program_id}
-            className="animate-benefit-pop h-full"
+            className="animate-benefit-pop w-64 flex-shrink-0 snap-start"
             style={{ animationDelay: `${100 + i * 120}ms` }}
           >
             <ProgramCard
               result={r}
               programName={programName(r.program_id)}
               clientId={clientId}
-              onResolve={r.status === "needs_review" ? () => onResolve(r.program_id) : undefined}
             />
           </div>
         ))}
       </div>
-
-      <ApplyPanel clientId={clientId} screening={screening} programs={programs} />
 
       {ineligibleResults.length > 0 && (
         <div>
@@ -84,14 +83,15 @@ export default function ResultsCard({ clientId, screening, programs, trace, onRe
               : `${ineligibleResults.length} program(s) screened likely not eligible — show ▼`}
           </button>
           {showIneligible && (
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="results-carousel -mx-1 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3">
               {ineligibleResults.map((r) => (
-                <ProgramCard
-                  key={r.program_id}
-                  result={r}
-                  programName={programName(r.program_id)}
-                  clientId={clientId}
-                />
+                <div key={r.program_id} className="w-64 flex-shrink-0 snap-start">
+                  <ProgramCard
+                    result={r}
+                    programName={programName(r.program_id)}
+                    clientId={clientId}
+                  />
+                </div>
               ))}
             </div>
           )}

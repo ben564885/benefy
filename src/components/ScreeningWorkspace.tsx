@@ -264,7 +264,7 @@ export default function ScreeningWorkspace({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="flex items-start justify-between gap-4">
+      <div className="mx-auto flex w-full max-w-6xl items-start justify-between gap-4 px-6">
         {header}
         <div className="flex flex-wrap items-center justify-end gap-3">
           <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
@@ -322,7 +322,9 @@ export default function ScreeningWorkspace({
           onCancelResolve={() => setResolving(null)}
         />
       ) : (
-        <RealtimeVoiceIntake clientId={clientId} lang={lang} onProfileUpdated={refreshRecord} />
+        <div className="mx-auto w-full max-w-6xl px-6">
+          <RealtimeVoiceIntake clientId={clientId} lang={lang} onProfileUpdated={refreshRecord} />
+        </div>
       )}
     </div>
   );

@@ -37,8 +37,8 @@ export async function buildPrefill(clientId: string, programId: string): Promise
   if (!program) return { ok: false, error: "Program not found" };
 
   const result = record.last_screening?.results.find((r) => r.program_id === programId);
-  if (!result || result.status !== "likely_eligible") {
-    return { ok: false, error: "Program is not marked likely_eligible for you yet — complete your screening first." };
+  if (!result || (result.status !== "likely_eligible" && result.status !== "needs_review")) {
+    return { ok: false, error: "This program isn't likely-eligible or needs-review for you — complete your screening first." };
   }
 
   const fields = Object.entries(program.application.prefill_map).map(([profileKey, formField]) => ({

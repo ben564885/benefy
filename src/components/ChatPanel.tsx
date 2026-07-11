@@ -72,7 +72,7 @@ function IncomeQuickInput({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+    <form onSubmit={submit} className="flex flex-wrap items-center justify-center gap-2">
       <span className="text-sm font-semibold text-slate-600">$</span>
       <input
         type="number"
@@ -115,6 +115,35 @@ function IncomeQuickInput({
   );
 }
 
+// Types an assistant message out character-by-character on first appearance,
+// then hands off to the markdown renderer once complete. `animate` is false for
+// messages restored from history so a reload doesn't retype the whole thread.
+function AssistantBubble({ text, animate }: { text: string; animate: boolean }) {
+  const [shown, setShown] = useState(animate ? 0 : text.length);
+
+  useEffect(() => {
+    if (!animate) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const id = window.setTimeout(() => setShown(text.length), 0);
+      return () => window.clearTimeout(id);
+    }
+    const id = window.setInterval(() => {
+      setShown((n) => {
+        const next = n + 2;
+        if (next >= text.length) {
+          window.clearInterval(id);
+          return text.length;
+        }
+        return next;
+      });
+    }, 12);
+    return () => window.clearInterval(id);
+  }, [text, animate]);
+
+  if (shown >= text.length) return <AgentMarkdown>{text}</AgentMarkdown>;
+  return <span className="whitespace-pre-wrap">{text.slice(0, shown)}</span>;
+}
+
 export default function ChatPanel({
   thread,
   profile,
@@ -141,6 +170,8 @@ export default function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastItemRef = useRef<HTMLDivElement>(null);
   const firstScroll = useRef(true);
+  // Everything present on mount is restored history — only type out what comes after.
+  const [historyLength] = useState(thread.length);
   const announcedFieldRef = useRef<ActiveField>(null);
   const t = INTAKE_STRINGS[lang];
 
@@ -211,11 +242,11 @@ export default function ChatPanel({
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto py-6">
         <div
           className={`flex min-h-full flex-col space-y-5 ${
-            thread.length === 0 ? "justify-center" : "justify-end"
+            thread.length === 0 ? "justify-center" : "justify-start"
           }`}
         >
           {thread.length === 0 && (
-            <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-2 px-6 py-16 text-center">
               <h2 className="text-2xl font-semibold text-slate-900">{t.emptyTitle}</h2>
               <p className="max-w-md text-sm text-slate-500">{t.emptySub}</p>
             </div>
@@ -226,10 +257,10 @@ export default function ChatPanel({
               <div
                 key={i}
                 ref={isLast ? lastItemRef : undefined}
-                className={`flex ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex px-6 ${item.message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`w-full rounded-3xl px-4 py-2.5 text-sm ${
+                  className={`max-w-3xl rounded-3xl px-6 py-4 text-lg leading-relaxed ${
                     item.message.role === "user"
                       ? "whitespace-pre-wrap bg-teal-700 text-white"
                       : "bg-slate-100 text-slate-800"
@@ -238,12 +269,16 @@ export default function ChatPanel({
                   {item.message.role === "user" ? (
                     item.message.content
                   ) : (
-                    <AgentMarkdown>{item.message.content}</AgentMarkdown>
+                    <AssistantBubble text={item.message.content} animate={i >= historyLength} />
                   )}
                 </div>
               </div>
             ) : (
-              <div key={i} ref={isLast ? lastItemRef : undefined}>
+              <div
+                key={i}
+                ref={isLast ? lastItemRef : undefined}
+                className="mx-auto w-full max-w-6xl px-6"
+              >
                 <ResultsCard
                   clientId={clientId}
                   screening={item.screening}
@@ -262,50 +297,51 @@ export default function ChatPanel({
             );
           })}
           {((sending && !sendingGuided) || screeningLoading) && (
-            <div className="flex justify-start">
-              <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
+            <div className="flex justify-start px-6">
+              <div className="rounded-3xl bg-slate-100 px-6 py-4 text-lg leading-relaxed text-slate-400">
                 {screeningLoading ? t.checking : t.thinking}
               </div>
-            </div>
-          )}
-          {activeField && !sendingGuided && (
-            <div ref={lastItemRef} className="flex flex-col gap-2">
-              <span className="pl-1 text-xs font-medium text-slate-400">
-                {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
-              </span>
-              {activeField === "monthly_income_gross" ? (
-                <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
-              ) : (
-                <div className="flex flex-wrap items-center gap-2">
-                  {t.chips[activeField].map((chip) => (
-                    <button
-                      key={chip.value}
-                      type="button"
-                      disabled={disabled || sending}
-                      onClick={() => submitMessage(chip.value, true, chip.label)}
-                      className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                  {activeField === "veteran_status" && (
-                    <button
-                      type="button"
-                      disabled={disabled || sending}
-                      onClick={onSkipVeteran}
-                      className="rounded-full border border-transparent px-4 py-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {t.skipOptionalLabel}
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 pt-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 pt-4">
+        {activeField && !sendingGuided && (
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-xs font-medium text-slate-400">
+              {activeField === "veteran_status" ? t.optional : t.questionOf(questionNumber, questionTotal)}
+            </span>
+            {activeField === "monthly_income_gross" ? (
+              <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
+            ) : (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {t.chips[activeField].map((chip) => (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    disabled={disabled || sending}
+                    onClick={() => submitMessage(chip.value, true, chip.label)}
+                    className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-base font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+                {activeField === "veteran_status" && (
+                  <button
+                    type="button"
+                    disabled={disabled || sending}
+                    onClick={onSkipVeteran}
+                    className="rounded-full border border-transparent px-5 py-2.5 text-base font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t.skipOptionalLabel}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {resolving && (
           <div className="flex w-fit items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-medium text-amber-800">
             <span>{t.resolvingLabel(resolving.name)}</span>
@@ -320,25 +356,27 @@ export default function ChatPanel({
           </div>
         )}
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm"
-        >
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            disabled={disabled || sending}
-            placeholder={composerPlaceholder}
-            className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
-          />
-          <button
-            type="submit"
-            disabled={disabled || sending || !draft.trim()}
-            className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-40"
+        {!activeField && (
+          <form
+            onSubmit={handleSubmit}
+            className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-sm"
           >
-            {t.send}
-          </button>
-        </form>
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={disabled || sending}
+              placeholder={composerPlaceholder}
+              className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
+            />
+            <button
+              type="submit"
+              disabled={disabled || sending || !draft.trim()}
+              className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-40"
+            >
+              {t.send}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

@@ -82,6 +82,7 @@
         "current_programs": "field_categorical_program"
       },
       "apply_mode": "pdf_fill",
+      "auto_apply_ready": true,
       "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "pge_account_number"]
     }
   },
@@ -474,6 +475,7 @@
         "zip_code": "field_zip_code"
       },
       "apply_mode": "web_submit",
+      "auto_apply_ready": true,
       "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "phone", "email", "sfpuc_account_number"]
     }
   },
@@ -584,8 +586,8 @@
         "annual_income_gross": "field_annual_income",
         "current_programs": "field_existing_benefits"
       },
-      "apply_mode": "web_submit",
-      "required_application_fields": ["legal_name", "street_address", "city", "mailing_zip_code", "email", "phone"]
+      "_apply_mode_note": "Was \"web_submit\" until the 2026-07-11 live walk of clipperstartcard.com/s/application: saving the first section immediately redirects to a passwordless email/SMS OTP screen, and Profile Information, Mailing Address, Verification Method, and the required Proof of Identity/Income uploads are all unreachable until that code is entered. A headless worker cannot read a one-time code out of the applicant's real inbox, so there is no automation path — not a stub. See worker/README.md.",
+      "apply_mode": "assisted"
     }
   },
   {
@@ -654,7 +656,8 @@
         "member_ages": "field_qualifying_children"
       },
       "apply_mode": "pdf_fill",
-      "required_application_fields": ["legal_name", "ssn_encrypted", "street_address", "city", "mailing_zip_code"]
+      "auto_apply_ready": true,
+      "required_application_fields": ["legal_name"]
     }
   }
 ]
