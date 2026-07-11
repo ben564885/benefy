@@ -32,6 +32,16 @@ const INTAKE_UPDATE_SIGNALS = [
   /\bpermanent resident\b/,
   /\bveteran\b|\bmilitary\b/,
   /\bsenior\b|\bdisabilit/,
+  // Mentions of a household member (age, care responsibilities, someone
+  // moving in) are profile-relevant facts even without the literal word
+  // "household" or "senior" — e.g. "I also take care of my mom, she's 68"
+  // should update has_senior/household_size, not get re-explained by the
+  // Navigator against a stale profile.
+  /\bmy (mom|mother|dad|father|parent|grandmother|grandfather|grandma|grandpa|husband|wife|spouse|son|daughter|child|kids?|sibling|brother|sister)\b/,
+  /\btake care of\b|\bcaring for\b|\bcaregiver\b/,
+  /\blives? with (me|us)\b|\bmoved in\b/,
+  /\b(she|he|they)\s+(is|are)\s+\d{1,3}\b/,
+  /\b\d{1,3}\s*years?\s*old\b/,
 ];
 
 // "Ask me the rest", "resolve the unresolved", "finish the questions" —
