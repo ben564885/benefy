@@ -27,6 +27,48 @@ export interface IntakeResponse {
   mode: "live_gradient_agent" | "live_inference" | "local_fallback";
 }
 
+const IMMIGRATION_STATUS_LABEL: Record<string, string> = {
+  citizen: "a U.S. citizen",
+  lpr: "a permanent resident",
+  other: "another immigration status",
+  unknown: "an unconfirmed immigration status",
+};
+
+function buildCompletionSummary(profile: ClientProfile): string {
+  const income =
+    profile.monthly_income_gross != null
+      ? `$${profile.monthly_income_gross.toLocaleString()}/month`
+      : profile.annual_income_gross != null
+        ? `$${profile.annual_income_gross.toLocaleString()}/year`
+        : "income on file";
+  const residency = profile.sf_resident ? "in San Francisco" : "outside San Francisco";
+  const status = profile.immigration_status
+    ? IMMIGRATION_STATUS_LABEL[profile.immigration_status]
+    : "immigration status on file";
+  return `Got it — household of ${profile.household_size}, ${income}, living ${residency}, ${status}. Running your screening now.`;
+}
+
+// Fast path for the guided quick-reply chips / income stepper in ChatPanel.
+// Their answers are already unambiguous, so there's no need to round-trip a
+// model per click — that's what caused a multi-second "Thinking…" beat
+// after every single question. This resolves locally and stays silent
+// (assistant_reply: null) until the last required field lands, at which
+// point it writes one summary message instead of one per question.
+export function runGuidedIntakeTurn(
+  userText: string,
+  profile: ClientProfile,
+): { patch: Partial<ClientProfile>; assistant_reply: string | null; ready_to_screen: boolean } {
+  const { patch } = extractProfilePatch(userText, profile);
+  const merged = { ...profile, ...patch };
+  const wasMissingCore = missingCoreFields(profile).length > 0;
+  const stillMissingCore = missingCoreFields(merged).length > 0;
+  return {
+    patch,
+    assistant_reply: wasMissingCore && !stillMissingCore ? buildCompletionSummary(merged) : null,
+    ready_to_screen: !stillMissingCore,
+  };
+}
+
 function buildFollowUpReply(profile: ClientProfile, patch: Partial<ClientProfile>): string {
   const merged = { ...profile, ...patch };
   const captured = Object.entries(patch)

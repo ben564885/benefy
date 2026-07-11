@@ -78,10 +78,10 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     }
   }
 
-  async function handleSend(message: string) {
+  async function handleSend(message: string, guided?: boolean) {
     const res = await fetch(`/api/clients/${clientId}/intake`, {
       method: "POST",
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, guided: guided === true }),
     });
     const data = await res.json();
     if (!res.ok) return;
@@ -89,10 +89,18 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     setThread((prev) => [
       ...prev,
       { kind: "message", message: { role: "user", content: message, timestamp: new Date().toISOString() } },
-      {
-        kind: "message",
-        message: { role: "assistant", content: data.assistant_reply, timestamp: new Date().toISOString() },
-      },
+      ...(data.assistant_reply
+        ? [
+            {
+              kind: "message" as const,
+              message: {
+                role: "assistant" as const,
+                content: data.assistant_reply,
+                timestamp: new Date().toISOString(),
+              },
+            },
+          ]
+        : []),
     ]);
 
     const updatedProfile: ClientProfile = data.profile ?? profile;

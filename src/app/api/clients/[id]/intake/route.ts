@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireOwnedClient } from "@/lib/auth";
-import { runIntakeTurn } from "@/lib/gradient/intakeAgent";
+import { runGuidedIntakeTurn, runIntakeTurn } from "@/lib/gradient/intakeAgent";
 import { explainScreening } from "@/lib/gradient/navigatorAgent";
 import { routeTurn } from "@/lib/gradient/router";
 import { appendChatMessages, getTrace, setTrace, updateProfile } from "@/lib/store";
@@ -17,11 +17,41 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const body = await request.json().catch(() => ({}));
   const message: string = body.message ?? "";
+  const guided: boolean = body.guided === true;
   if (!message.trim()) {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
   const trace: TraceStep[] = await getTrace(id);
+
+  // Guided quick-reply chips / income stepper: skip the router and any
+  // model call entirely. See runGuidedIntakeTurn for why.
+  if (guided) {
+    trace.push({
+      step: "intake_guided_fast_path",
+      actor: "intake_agent",
+      detail: "Structured quick-reply answer — resolved locally with no model call.",
+      timestamp: new Date().toISOString(),
+    });
+    const userMessage: ChatMessage = { role: "user", content: message, timestamp: new Date().toISOString() };
+    const { patch, assistant_reply, ready_to_screen } = runGuidedIntakeTurn(message, record.profile);
+    const updated = await updateProfile(id, patch);
+    const messages: ChatMessage[] = [userMessage];
+    if (assistant_reply) {
+      messages.push({ role: "assistant", content: assistant_reply, timestamp: new Date().toISOString() });
+    }
+    await appendChatMessages(id, messages);
+    await setTrace(id, trace);
+    return NextResponse.json({
+      target: "intake",
+      assistant_reply,
+      ready_to_screen,
+      mode: "local_fallback",
+      profile: updated?.profile ?? record.profile,
+      trace,
+    });
+  }
+
   const target = routeTurn(message, record.last_screening != null);
   trace.push({
     step: "router_decision",

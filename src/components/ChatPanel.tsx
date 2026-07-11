@@ -25,7 +25,7 @@ interface Props {
   profile: ClientProfile;
   clientId: string;
   programs: ProgramDefinition[];
-  onSend: (message: string) => Promise<void>;
+  onSend: (message: string, guided?: boolean) => Promise<void>;
   onResolve: (programId: string) => void;
   onRecheck?: () => void;
   screeningLoading?: boolean;
@@ -67,7 +67,7 @@ const CHIPS: Record<Exclude<ActiveField, "monthly_income_gross" | null>, { label
   ],
 };
 
-function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string) => void; disabled?: boolean }) {
+function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string, guided?: boolean) => void; disabled?: boolean }) {
   const [amount, setAmount] = useState("");
   const [period, setPeriod] = useState<"month" | "year">("month");
 
@@ -75,7 +75,7 @@ function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string) => 
     e.preventDefault();
     const n = Number(amount.replace(/[^0-9.]/g, ""));
     if (!amount.trim() || Number.isNaN(n) || n <= 0) return;
-    onSubmit(`$${n} a ${period}`);
+    onSubmit(`$${n} a ${period}`, true);
     setAmount("");
   }
 
@@ -151,11 +151,11 @@ export default function ChatPanel({
     ? missing[0].prompt
     : "Is anyone in your household a senior (65+) or living with a disability? Optional — it only affects one SF program.";
 
-  async function submitMessage(text: string) {
+  async function submitMessage(text: string, guided = false) {
     if (!text.trim() || sending) return;
     setSending(true);
     try {
-      await onSend(text);
+      await onSend(text, guided);
     } finally {
       setSending(false);
     }
@@ -231,7 +231,7 @@ export default function ChatPanel({
                     key={chip.value}
                     type="button"
                     disabled={disabled || sending}
-                    onClick={() => submitMessage(chip.value)}
+                    onClick={() => submitMessage(chip.value, true)}
                     className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {chip.label}
