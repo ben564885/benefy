@@ -43,3 +43,8 @@ body {
 .animate-marquee-right {
   animation: marquee-right 38s linear infinite;
 }
+
+.bg-dot-grid {
+  background-image: radial-gradient(currentColor 1.5px, transparent 1.5px);
+  background-size: 14px 14px;
+}

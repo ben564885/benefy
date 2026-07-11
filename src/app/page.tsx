@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import HeroCollage from "@/components/landing/HeroCollage";
 import MarqueeRow from "@/components/landing/MarqueeRow";
 import IntakeMockup from "@/components/landing/IntakeMockup";
 import StartScreeningButton from "@/components/StartScreeningButton";
@@ -74,36 +75,59 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-4xl flex-col items-center px-6 pt-16 pb-20 text-center sm:pt-20">
-        <div className="mb-8 inline-flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">
-          <span className="h-px w-8 bg-slate-300" />
-          Built for San Francisco residents
-          <span className="h-px w-8 bg-slate-300" />
+      <section className="relative mx-auto w-full max-w-6xl overflow-hidden px-6 pt-8 pb-20 sm:pt-12">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-8">
+          <div>
+            <div className="mb-5 flex flex-col gap-1 text-teal-600">
+              <div className="flex gap-1.5">
+                <span>▸</span>
+                <span>▸</span>
+                <span>▸</span>
+              </div>
+              <div className="flex gap-1.5 opacity-40">
+                <span>▸</span>
+                <span>▸</span>
+                <span>▸</span>
+              </div>
+            </div>
+
+            <div className="mb-6 inline-flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+              <span className="h-px w-8 bg-slate-300" />
+              Built for San Francisco residents
+            </div>
+
+            <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl md:text-7xl">
+              Find every
+              <br />
+              dollar you
+              <br />
+              <span className="text-teal-700">qualify for.</span>
+            </h1>
+
+            <p className="mt-6 max-w-md text-base text-slate-500 sm:text-lg">
+              Tell us about your household in plain English. Benefy&apos;s intake agent builds
+              your profile, a deterministic rules engine screens it against real SF benefit
+              programs, and you get a dollar estimate plus a pre-filled application — in minutes,
+              not hours.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <StartScreeningButton
+                className="rounded-full bg-teal-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800"
+              />
+              <a
+                href="#how-it-works"
+                className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                See how it works
+              </a>
+            </div>
+          </div>
+
+          <HeroCollage />
         </div>
 
-        <h1 className="text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
-          Find every dollar
-          <br />
-          <span className="text-teal-700">you qualify for.</span>
-        </h1>
-
-        <p className="mt-6 max-w-2xl text-base text-slate-500 sm:text-lg">
-          Tell us about your household in plain English. Benefy&apos;s intake agent builds your
-          profile, a deterministic rules engine screens it against real SF benefit programs, and
-          you get a dollar estimate plus a pre-filled application — in minutes, not hours.
-        </p>
-
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <StartScreeningButton
-            className="rounded-full bg-teal-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800"
-          />
-          <a
-            href="#how-it-works"
-            className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-          >
-            See how it works
-          </a>
-        </div>
+        <div className="bg-dot-grid absolute -bottom-4 -left-4 hidden h-16 w-16 -rotate-6 text-teal-200 opacity-70 lg:block" />
       </section>
 
       <section id="programs" className="flex flex-col gap-3 pb-16">
