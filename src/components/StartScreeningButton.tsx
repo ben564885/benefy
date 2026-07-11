@@ -39,7 +39,11 @@ export default function StartScreeningButton({ className, label = "Check what I 
   }
 
   return (
-    <button onClick={handleClick} disabled={loading} className={className}>
+    <button
+      onClick={handleClick}
+      disabled={loading}
+      className={`cursor-pointer disabled:cursor-not-allowed ${className ?? ""}`}
+    >
       {loading ? loadingLabel : label}
     </button>
   );
