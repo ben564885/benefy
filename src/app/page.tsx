@@ -68,21 +68,23 @@ export default function HomePage() {
       />
 
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <Link href="/" className="flex items-center">
-          <Image src="/logo_benefy.png" alt="Benefy" width={546} height={222} className="h-7 w-auto brightness-0 invert" priority />
-        </Link>
+        <div className="flex items-center gap-10">
+          <Link href="/" className="flex items-center">
+            <Image src="/logo_benefy.png" alt="Benefy" width={546} height={222} className="h-7 w-auto brightness-0 invert" priority />
+          </Link>
 
-        <nav className="hidden items-center gap-8 text-sm font-bold text-white md:flex">
-          <a href="#how-it-works" className="hover:text-white/70">
-            How it works
-          </a>
-          <a href="#trust" className="hover:text-white/70">
-            Trust &amp; guardrails
-          </a>
-          <a href="#programs" className="hover:text-white/70">
-            Programs
-          </a>
-        </nav>
+          <nav className="hidden items-center gap-8 text-sm font-bold text-white md:flex">
+            <a href="#how-it-works" className="hover:text-white/70">
+              How it works
+            </a>
+            <a href="#trust" className="hover:text-white/70">
+              Trust &amp; guardrails
+            </a>
+            <a href="#programs" className="hover:text-white/70">
+              Programs
+            </a>
+          </nav>
+        </div>
 
         <div className="flex items-center gap-3">
           <StartScreeningButton
