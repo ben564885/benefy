@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import VoiceOrb from "@/components/VoiceOrb";
 
 interface Props {
   clientId: string;
@@ -43,9 +44,43 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
   const streamRef = useRef<MediaStream | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
 
+  const [level, setLevel] = useState(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const localAnalyserRef = useRef<AnalyserNode | null>(null);
+  const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
+  const meterRafRef = useRef<number | null>(null);
+
   useEffect(() => {
     return () => disconnect();
   }, []);
+
+  function startMeter() {
+    const meterData = new Uint8Array(64);
+    const tick = () => {
+      let next = 0;
+      if (localAnalyserRef.current) {
+        localAnalyserRef.current.getByteFrequencyData(meterData);
+        next = Math.max(next, meterData.reduce((a, b) => a + b, 0) / meterData.length / 255);
+      }
+      if (remoteAnalyserRef.current) {
+        remoteAnalyserRef.current.getByteFrequencyData(meterData);
+        next = Math.max(next, meterData.reduce((a, b) => a + b, 0) / meterData.length / 255);
+      }
+      setLevel(next);
+      meterRafRef.current = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
+  function stopMeter() {
+    if (meterRafRef.current) cancelAnimationFrame(meterRafRef.current);
+    meterRafRef.current = null;
+    audioCtxRef.current?.close().catch(() => {});
+    audioCtxRef.current = null;
+    localAnalyserRef.current = null;
+    remoteAnalyserRef.current = null;
+    setLevel(0);
+  }
 
   function appendLine(role: "user" | "assistant", text: string) {
     if (!text) return;
@@ -133,16 +168,29 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
       const pc = new RTCPeerConnection();
       pcRef.current = pc;
 
+      const audioCtx = new AudioContext();
+      audioCtxRef.current = audioCtx;
+
       const audioEl = document.createElement("audio");
       audioEl.autoplay = true;
       audioElRef.current = audioEl;
       pc.ontrack = (e) => {
         audioEl.srcObject = e.streams[0];
+        const remoteAnalyser = audioCtx.createAnalyser();
+        remoteAnalyser.fftSize = 128;
+        audioCtx.createMediaStreamSource(e.streams[0]).connect(remoteAnalyser);
+        remoteAnalyserRef.current = remoteAnalyser;
       };
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      const localAnalyser = audioCtx.createAnalyser();
+      localAnalyser.fftSize = 128;
+      audioCtx.createMediaStreamSource(stream).connect(localAnalyser);
+      localAnalyserRef.current = localAnalyser;
+      startMeter();
 
       const dc = pc.createDataChannel("oai-events");
       dcRef.current = dc;
@@ -186,12 +234,25 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
     streamRef.current = null;
     if (audioElRef.current) audioElRef.current.srcObject = null;
     audioElRef.current = null;
+    stopMeter();
     setStatus((s) => (s === "error" ? s : "idle"));
   }
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex-1 space-y-3 overflow-y-auto p-5" style={{ minHeight: "20rem", maxHeight: "28rem" }}>
+      <div className="flex flex-col items-center gap-2 border-b border-slate-100 py-6">
+        <VoiceOrb status={status} level={level} />
+        <p className="text-xs text-slate-400">
+          {status === "connected"
+            ? "Listening…"
+            : status === "connecting"
+              ? "Connecting…"
+              : status === "error"
+                ? "Something went wrong"
+                : "Tap Start talking to begin"}
+        </p>
+      </div>
+      <div className="flex-1 space-y-3 overflow-y-auto p-5" style={{ minHeight: "14rem", maxHeight: "22rem" }}>
         {lines.length === 0 && (
           <p className="text-sm text-slate-400">
             Voice intake (beta) — tap Start talking and describe your household out loud. Requires microphone access.
@@ -208,11 +269,6 @@ export default function RealtimeVoiceIntake({ clientId, onProfileUpdated }: Prop
             </div>
           </div>
         ))}
-        {status === "connected" && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">Listening…</div>
-          </div>
-        )}
       </div>
       <div className="flex items-center justify-between gap-2 border-t border-slate-100 p-3">
         <span className="truncate text-xs text-slate-400">
