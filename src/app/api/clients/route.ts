@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const clientId = nextClientId();
   const profile: ClientProfile = {
     client_id: clientId,
-    display_name: body.display_name || `New Client ${clientId}`,
+    display_name: body.display_name || "You",
     household_size: null,
     monthly_income_gross: null,
     annual_income_gross: null,

@@ -31,14 +31,14 @@ export type PrefillOutcome = { ok: true; data: PrefillData } | { ok: false; erro
 
 export function buildPrefill(clientId: string, programId: string): PrefillOutcome {
   const record = getClient(clientId);
-  if (!record) return { ok: false, error: "Client not found" };
+  if (!record) return { ok: false, error: "Screening session not found" };
 
   const program = getProgram(programId);
   if (!program) return { ok: false, error: "Program not found" };
 
   const result = record.last_screening?.results.find((r) => r.program_id === programId);
   if (!result || result.status !== "likely_eligible") {
-    return { ok: false, error: "Program is not marked likely_eligible for this client — screen the client first." };
+    return { ok: false, error: "Program is not marked likely_eligible for you yet — complete your screening first." };
   }
 
   const fields = Object.entries(program.application.prefill_map).map(([profileKey, formField]) => ({

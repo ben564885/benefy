@@ -1,4 +1,3 @@
-import { SEED_CLIENTS } from "@/lib/data/seed-clients";
 import { screenClient } from "@/lib/engine";
 import type { ChatMessage, ClientProfile, ClientRecord, TraceStep } from "@/lib/types";
 
@@ -11,18 +10,14 @@ interface Store {
 // Module-level in-memory store. Survives across requests within one server
 // process (this is a demo app: no auth, no persistence beyond process lifetime,
 // per spec §9 "In-memory or SQLite/JSON storage — no auth").
-// Stashed on globalThis so Next.js dev-mode hot reload doesn't wipe seeded data.
+// Stashed on globalThis so Next.js dev-mode hot reload doesn't wipe active sessions.
 const globalForStore = globalThis as unknown as { __benefyStore?: Store };
 
-function seed(): Store {
-  const clients = new Map<string, ClientRecord>();
-  for (const profile of SEED_CLIENTS) {
-    clients.set(profile.client_id, { profile, last_screening: null });
-  }
-  return { clients, chatHistory: new Map(), traces: new Map() };
+function emptyStore(): Store {
+  return { clients: new Map(), chatHistory: new Map(), traces: new Map() };
 }
 
-const store = globalForStore.__benefyStore ?? seed();
+const store = globalForStore.__benefyStore ?? emptyStore();
 globalForStore.__benefyStore = store;
 
 export function listClients(): ClientRecord[] {

@@ -45,7 +45,7 @@ export default function ProfilePanel({ profile, readyToScreen }: { profile: Clie
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">Client profile</h3>
+        <h3 className="text-sm font-semibold text-slate-900">Your profile</h3>
         <p className="mt-1 text-xs text-slate-500">
           {capturedCount}/{fields.length} fields captured
           {readyToScreen ? " — ready to screen" : " — still missing required fields"}

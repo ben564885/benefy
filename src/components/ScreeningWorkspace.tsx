@@ -123,7 +123,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
               disabled={!readyToScreen || screening_loading}
               className="rounded-lg bg-teal-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {screening_loading ? "Screening…" : "Screen client"}
+              {screening_loading ? "Screening…" : "Check what I qualify for"}
             </button>
           </div>
         </div>

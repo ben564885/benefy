@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Benefy — SF Benefits Screening",
   description:
-    "Benefits-screening tool for San Francisco caseworkers: deterministic eligibility, Gradient AI-guided intake, and pre-filled applications.",
+    "Self-serve benefits screening for San Francisco residents: deterministic eligibility, Gradient AI-guided intake, and pre-filled applications.",
 };
 
 export default function RootLayout({

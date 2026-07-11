@@ -3,7 +3,7 @@
 // It approximates what the real Gradient Intake Agent does with an LLM:
 // turn free text into ClientProfile field patches. It is intentionally
 // conservative — it only fills a field when it finds a reasonably clear
-// signal, and otherwise leaves the field for the caseworker to confirm.
+// signal, and otherwise leaves the field for the user to confirm.
 
 import type { ClientProfile, ImmigrationStatus } from "@/lib/types";
 
@@ -162,16 +162,16 @@ export function extractProfilePatch(
 }
 
 export const CORE_REQUIRED_FIELDS: { key: keyof ClientProfile; prompt: string }[] = [
-  { key: "household_size", prompt: "How many people are in the household?" },
+  { key: "household_size", prompt: "How many people are in your household?" },
   {
     key: "monthly_income_gross",
-    prompt: "What's the household's approximate gross monthly (or annual) income?",
+    prompt: "What's your household's approximate gross monthly (or annual) income?",
   },
-  { key: "sf_resident", prompt: "Does the client live in San Francisco?" },
+  { key: "sf_resident", prompt: "Do you live in San Francisco?" },
   {
     key: "immigration_status",
     prompt:
-      "What's the client's immigration status (citizen, lawful permanent resident, other, or unknown)?",
+      "What's your immigration status (citizen, lawful permanent resident, other, or unknown)?",
   },
 ];
 

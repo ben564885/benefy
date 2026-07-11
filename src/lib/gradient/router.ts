@@ -1,4 +1,4 @@
-// Multi-agent router (spec §7.1): decides whether a caseworker's chat turn
+// Multi-agent router (spec §7.1): decides whether a user's chat turn
 // is "capture/update client info" (→ Intake Agent) or "explain / what's
 // next / what documents" (→ Navigator Agent). Gradient's Agent Routing does
 // this at the platform level when both agents are deployed there; this is

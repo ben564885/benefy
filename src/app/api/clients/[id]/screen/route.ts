@@ -39,7 +39,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   trace.push({
     step: "navigator_explanation_ready",
     actor: "navigator_agent",
-    detail: "Navigator agent explained the function's result to the caseworker; it did not compute eligibility itself.",
+    detail: "Navigator agent explained the function's result to the user; it did not compute eligibility itself.",
     timestamp: new Date().toISOString(),
   });
   setTrace(id, trace);

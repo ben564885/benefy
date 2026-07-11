@@ -21,7 +21,7 @@ export default async function ApplicationPage({
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-10">
       <div className="print:hidden">
         <Link href={`/clients/${id}`} className="text-xs font-medium text-slate-500 hover:text-slate-700">
-          ← Back to {record.profile.display_name}
+          ← Back to your screening
         </Link>
       </div>
 
@@ -61,7 +61,7 @@ export default async function ApplicationPage({
 
           {outcome.data.required_documents.length > 0 && (
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold text-slate-900">Documents the client will need</h2>
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">Documents you&apos;ll need</h2>
               <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
                 {outcome.data.required_documents.map((doc) => (
                   <li key={doc}>{doc}</li>
@@ -72,8 +72,8 @@ export default async function ApplicationPage({
 
           <p className="text-xs text-slate-400">
             Generated {new Date(outcome.data.generated_at).toLocaleString()} · This is a draft pre-fill only. Benefy
-            does not submit applications electronically — the caseworker must review and submit through the official
-            channel above.
+            does not submit applications electronically — you must review and submit through the official channel
+            above.
           </p>
         </div>
       )}

@@ -16,9 +16,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <div className="flex items-center justify-between">
         <div>
           <Link href="/" className="text-xs font-medium text-slate-500 hover:text-slate-700">
-            ← Back to dashboard
+            ← Back home
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-900">{record.profile.display_name}</h1>
+          <h1 className="mt-1 text-2xl font-semibold text-slate-900">Your benefits screening</h1>
           <p className="text-sm text-slate-500">{record.profile.zip_code ?? "No ZIP on file yet"}</p>
         </div>
       </div>

@@ -49,7 +49,7 @@ export const UPDATE_PROFILE_TOOL: GradientToolDefinition = {
   function: {
     name: "update_client_profile",
     description:
-      "Persist known facts about the client's household, income, residency, and immigration status. Call this every time the caseworker states or corrects information — even a single field. Only include fields you're confident about; omit anything not mentioned.",
+      "Persist known facts about the user's household, income, residency, and immigration status. Call this every time the user states or corrects information — even a single field. Only include fields you're confident about; omit anything not mentioned.",
     parameters: {
       type: "object",
       properties: {

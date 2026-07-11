@@ -98,7 +98,7 @@ function evaluateProgram(profile: ClientProfile, program: ProgramDefinition): El
       ...base,
       status: "likely_ineligible",
       confidence: 0.9,
-      reason: `${program.name} requires San Francisco residency; client is not an SF resident.`,
+      reason: `${program.name} requires San Francisco residency; you are not an SF resident.`,
     };
   }
   if (program.eligibility.requires_senior_or_disabled) {
@@ -111,7 +111,7 @@ function evaluateProgram(profile: ClientProfile, program: ProgramDefinition): El
         ...base,
         status: "likely_ineligible",
         confidence: 0.9,
-        reason: `${program.name} requires the client (or a household member) to be a senior (${cutoff}+) or have a qualifying disability; neither applies.`,
+        reason: `${program.name} requires you (or a household member) to be a senior (${cutoff}+) or have a qualifying disability; neither applies.`,
       };
     }
   }
@@ -136,7 +136,7 @@ function evaluateProgram(profile: ClientProfile, program: ProgramDefinition): El
       status: "likely_eligible",
       confidence: 0.95,
       income_pct_fpl: pctOfBasis,
-      reason: `Client already receives ${categoricalHit}, which categorically qualifies them for ${program.name} without a separate income test.`,
+      reason: `You already receive ${categoricalHit}, which categorically qualifies you for ${program.name} without a separate income test.`,
       estimated_annual_value: value,
     };
   }

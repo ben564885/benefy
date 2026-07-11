@@ -32,8 +32,8 @@ export default function ChatPanel({ messages, onSend, disabled, placeholder }: P
       <div className="flex-1 space-y-3 overflow-y-auto p-5" style={{ minHeight: "20rem", maxHeight: "28rem" }}>
         {messages.length === 0 && (
           <p className="text-sm text-slate-400">
-            Type what the client tells you in natural language — e.g. &ldquo;single mom, two kids, makes about
-            $2,400 a month, on Medi-Cal, lives in the Tenderloin.&rdquo;
+            Tell us about your household in natural language — e.g. &ldquo;single mom, two kids, I make about
+            $2,400 a month, on Medi-Cal, live in the Tenderloin.&rdquo;
           </p>
         )}
         {messages.map((m, i) => (
@@ -60,7 +60,7 @@ export default function ChatPanel({ messages, onSend, disabled, placeholder }: P
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           disabled={disabled || sending}
-          placeholder={placeholder ?? "Tell Benefy about the client…"}
+          placeholder={placeholder ?? "Tell Benefy about yourself…"}
           className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-500 disabled:bg-slate-50"
         />
         <button

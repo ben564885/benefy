@@ -1,3 +1,5 @@
+import PillIcon from "./PillIcon";
+
 const rowStyles: Record<"left" | "right", string> = {
   left: "animate-marquee-left",
   right: "animate-marquee-right",
@@ -20,7 +22,7 @@ export default function MarqueeRow({
             key={`${item}-${i}`}
             className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-teal-600" />
+            <PillIcon label={item} />
             {item}
           </span>
         ))}

@@ -11,8 +11,8 @@ export default function IntakeMockup() {
       <div className="grid grid-cols-1 gap-0 sm:grid-cols-5">
         <div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:col-span-3 sm:border-b-0 sm:border-r">
           <div className="self-start rounded-2xl rounded-bl-sm bg-slate-100 px-4 py-3 text-sm text-slate-700">
-            Single mom, two kids, works part-time at a bakery, lives in the Mission. Worried
-            about her PG&amp;E bill.
+            I&apos;m a single mom with two kids, work part-time at a bakery, and live in the
+            Mission. Worried about my PG&amp;E bill.
           </div>
           <div className="self-end rounded-2xl rounded-br-sm bg-teal-700 px-4 py-3 text-sm text-white">
             Got it — household of 3, part-time income. Checking CalFresh, PG&amp;E CARE, and SFMTA

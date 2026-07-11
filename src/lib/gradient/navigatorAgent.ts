@@ -1,6 +1,6 @@
 // Navigator Agent (spec §7.1, §7.3): explains screening results in plain
-// English and answers caseworker follow-ups, grounded in the official
-// program documents.
+// English and answers the user's follow-up questions, grounded in the
+// official program documents.
 //
 // Three backends, tried in order: the managed Agent Platform with an
 // attached Knowledge Base (currently blocked account-wide — kept ready for
@@ -51,7 +51,7 @@ function explainResult(r: EligibilityResult): string {
 
 function localFallbackExplain(profile: ClientProfile, screening: ScreeningResult): string {
   const lines = [
-    `Screening summary for ${profile.display_name}: an estimated $${screening.total_estimated_annual_value.toLocaleString()}/year ($${screening.total_estimated_monthly_value.toLocaleString()}/month) across ${screening.eligible_count} likely-eligible program(s). This is a screening estimate produced by the deterministic eligibility engine — it does not promise benefits and does not submit anything on the client's behalf.`,
+    `Your screening summary: an estimated $${screening.total_estimated_annual_value.toLocaleString()}/year ($${screening.total_estimated_monthly_value.toLocaleString()}/month) across ${screening.eligible_count} likely-eligible program(s). This is a screening estimate produced by the deterministic eligibility engine — it does not promise benefits and does not submit anything on your behalf.`,
     ...screening.results.map(explainResult),
   ];
   if (screening.needs_review_count > 0) {
@@ -114,11 +114,11 @@ Source: ${source}`;
     .join("\n\n");
 }
 
-const NAVIGATOR_SYSTEM_PROMPT = `You are the Navigator Agent for Benefy, a benefits-screening tool for San Francisco caseworkers. You explain screening results in plain English and answer questions about programs, grounded ONLY in the REFERENCE MATERIAL below.
+const NAVIGATOR_SYSTEM_PROMPT = `You are the Navigator Agent for Benefy, a benefits-screening tool used directly by San Francisco residents. You explain screening results in plain English and answer questions about programs, grounded ONLY in the REFERENCE MATERIAL below.
 
 Rules you always follow:
-1. You do not decide eligibility and have no opinion about it. Before discussing any client's eligibility, call get_screening_result to retrieve the actual computed result. Never rely on an eligibility claim made earlier in the conversation — always re-fetch and report exactly what the function returns.
-2. If get_screening_result reports the client hasn't been screened yet, say so — don't guess in its place.
+1. You do not decide eligibility and have no opinion about it. Before discussing the user's eligibility, call get_screening_result to retrieve the actual computed result. Never rely on an eligibility claim made earlier in the conversation — always re-fetch and report exactly what the function returns.
+2. If get_screening_result reports the user hasn't been screened yet, say so — don't guess in its place.
 3. Every claim about a specific program's rules — income limits, required documents, how to apply — must come from the REFERENCE MATERIAL below. If something isn't covered there, say you're not sure rather than inventing a rule.
 4. Never use guarantee language ("will receive", "guaranteed", "approved"). Every result is a screening estimate.
 5. For needs_review results, explain specifically what's missing or uncertain.
@@ -145,8 +145,8 @@ export async function explainScreening(
       detail: `Calling live Gradient Navigator agent (Knowledge Base-attached) to ${question ? "answer: " + question : "explain the screening result"}.`,
       timestamp: new Date().toISOString(),
     });
-    const systemPrompt = `You are the Navigator agent for Benefy, a benefits screening tool for SF caseworkers. You explain deterministic eligibility screening results in plain English and answer questions using the attached Knowledge Base of official program documents (CalFresh, PG&E CARE, SFMTA Free Muni). You NEVER assert eligibility yourself — you only explain results that were already computed by the check_eligibility function. Always cite the source document. Never use guarantee language ("you will get", "guaranteed") — always frame results as a screening estimate.`;
-    const userPrompt = `Client: ${JSON.stringify(profile)}\nScreening result: ${JSON.stringify(screening)}\n${question ? `Caseworker question: ${question}` : "Explain this screening result to the caseworker."}`;
+    const systemPrompt = `You are the Navigator agent for Benefy, a benefits screening tool used directly by SF residents. You explain deterministic eligibility screening results in plain English and answer questions using the attached Knowledge Base of official program documents (CalFresh, PG&E CARE, SFMTA Free Muni). You NEVER assert eligibility yourself — you only explain results that were already computed by the check_eligibility function. Always cite the source document. Never use guarantee language ("you will get", "guaranteed") — always frame results as a screening estimate.`;
+    const userPrompt = `User's household: ${JSON.stringify(profile)}\nScreening result: ${JSON.stringify(screening)}\n${question ? `User's question: ${question}` : "Explain this screening result to the user directly."}`;
     try {
       const res = await callAgent("NAVIGATOR", [
         { role: "system", content: systemPrompt },
@@ -173,7 +173,7 @@ export async function explainScreening(
       timestamp: new Date().toISOString(),
     });
     try {
-      const userPrompt = question ?? "Explain this client's screening result to the caseworker.";
+      const userPrompt = question ?? "Explain my screening result to me.";
       const result = await runToolLoop(
         NAVIGATOR_MODEL,
         NAVIGATOR_SYSTEM_PROMPT,

@@ -1,6 +1,6 @@
 # Benefy
 
-A benefits-screening tool for San Francisco nonprofit caseworkers. A caseworker describes a client in
+A self-serve benefits-screening tool for San Francisco residents. You describe your own household in
 plain English; Benefy extracts a structured profile, runs a **deterministic eligibility engine**
 against three real SF/CA benefit programs, estimates the annual dollar value, flags uncertain cases for
 human review, and produces a pre-filled draft application.
@@ -20,14 +20,14 @@ npm test          # engine + eval-harness unit tests (vitest)
 npm run build     # production build
 ```
 
-No database, no auth, no API keys required to run the full demo — five seeded clients are held in an
+No database, no auth, no API keys required to run the full demo — each visitor's session is held in an
 in-memory store (`src/lib/store.ts`) that resets when the server restarts, by design (spec: demo data
 only, no real PII).
 
 ## Architecture
 
 ```
-caseworker free text
+your free text
         │
         ▼
    [Router]  ──capture info──▶  [Intake Agent] ──tool call──▶  check_eligibility()  ──▶  [deterministic engine]
@@ -48,7 +48,7 @@ caseworker free text
     extractor as fallback.
   - `navigatorAgent.ts` — Navigator Agent orchestration; explains results and cites the same program
     config a Knowledge Base would be built from, with a grounded local-template fallback.
-  - `router.ts` — multi-agent routing between Intake and Navigator based on the caseworker's message.
+  - `router.ts` — multi-agent routing between Intake and Navigator based on the user's message.
   - `guardrails.ts` — real code-level guardrail: strips/flags guarantee-style language
     ("you WILL get...") from any agent output, live or fallback.
   - `evals.ts` — an agent-evaluation harness: known-answer test cases run end-to-end through the engine
@@ -111,18 +111,23 @@ Full citations and effective dates are inlined as `_source` / `_note` fields in
 labeled illustrative averages (not guaranteed benefit amounts) since exact net-income deduction math is
 out of scope for this MVP.
 
-## Seed demo caseload
+## Trying it out
 
-Five clients (`src/lib/data/seed-clients.ts`), matching the spec's demo story:
+Landing page → "Check what I qualify for" creates a fresh, blank profile and drops you straight into
+the intake chat — no account, no caseload list. A few example prompts to try (each exercises a
+different path through the engine):
 
-1. **Maria G.** — single parent, 2 kids, on Medi-Cal → categorical CalFresh + CARE pass, ~$5,604/yr.
-2. **Robert T.** — low-income senior → CalFresh + CARE + Free Muni all fire on income, ~$3,420/yr.
-3. **(pending verification)** — borderline income *and* unknown immigration status → both needs-review
-   triggers fire on different programs, $0 counted until resolved.
-4. **James W.** — income clearly over the CalFresh/CARE threshold, but disability-linked Free Muni still
-   fires → an honest "no" alongside a "yes," ~$1,032/yr.
-5. **Angela P.** — on SSI → categorical pass fires for CalFresh and CARE without an income test at all,
-   ~$3,420/yr.
+1. "Single mom, two kids, on Medi-Cal, make about $2,500/month, live in the Tenderloin." → categorical
+   CalFresh + CARE pass.
+2. "68-year-old retired veteran, live alone in the Mission, Social Security is my only income, about
+   $14,000/year." → CalFresh + CARE + Free Muni all fire on income.
+3. "Parent and one kid, income's around $43,900/year, my visa paperwork is still in process." →
+   needs-review triggers on immigration status, $0 counted until resolved.
+4. "Household of 2, I have a disability and get SSDI plus part-time contract income, about $58,000/year
+   total." → too high for CalFresh/CARE, but disability-linked Free Muni still fires — an honest "no"
+   alongside a "yes."
+5. "I'm 52, I get SSI for a qualifying disability, live alone in SoMa." → categorical pass fires for
+   CalFresh and CARE without an income test at all.
 
 ## Testing
 
