@@ -7,6 +7,7 @@ import {
   missingCoreFields,
   missingSeniorDisabilityField,
 } from "@/lib/gradient/intakeExtractor";
+import { INTAKE_STRINGS, type Lang } from "@/lib/i18n";
 import ResultsCard from "@/components/ResultsCard";
 
 export type ThreadItem =
@@ -25,7 +26,8 @@ interface Props {
   profile: ClientProfile;
   clientId: string;
   programs: ProgramDefinition[];
-  onSend: (message: string, guided?: boolean) => Promise<void>;
+  lang?: Lang;
+  onSend: (message: string, guided?: boolean, display?: string) => Promise<void>;
   onResolve: (programId: string) => void;
   onRecheck?: () => void;
   screeningLoading?: boolean;
@@ -41,41 +43,25 @@ type ActiveField =
   | "senior_disability"
   | null;
 
-const CHIPS: Record<Exclude<ActiveField, "monthly_income_gross" | null>, { label: string; value: string }[]> = {
-  household_size: [
-    { label: "1 (just me)", value: "I live alone" },
-    { label: "2", value: "Household of 2" },
-    { label: "3", value: "Household of 3" },
-    { label: "4", value: "Household of 4" },
-    { label: "5", value: "Household of 5" },
-    { label: "6+", value: "Household of 6" },
-  ],
-  sf_resident: [
-    { label: "Yes", value: "Yes, I live in San Francisco" },
-    { label: "No", value: "No, I live outside San Francisco" },
-  ],
-  immigration_status: [
-    { label: "U.S. citizen", value: "I'm a U.S. citizen" },
-    { label: "Permanent resident (green card)", value: "I'm a permanent resident (green card)" },
-    { label: "Other status", value: "Other immigration status" },
-    { label: "Not sure", value: "I'm not sure about my immigration status" },
-  ],
-  senior_disability: [
-    { label: "Yes, a senior (65+)", value: "Someone in my household is a senior (65+)" },
-    { label: "Yes, a disability", value: "Someone in my household has a disability" },
-    { label: "No, neither", value: "No one is a senior and no one has a disability" },
-  ],
-};
-
-function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string, guided?: boolean) => void; disabled?: boolean }) {
+function IncomeQuickInput({
+  lang,
+  onSubmit,
+  disabled,
+}: {
+  lang: Lang;
+  onSubmit: (text: string, guided?: boolean, display?: string) => void;
+  disabled?: boolean;
+}) {
   const [amount, setAmount] = useState("");
   const [period, setPeriod] = useState<"month" | "year">("month");
+  const t = INTAKE_STRINGS[lang];
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const n = Number(amount.replace(/[^0-9.]/g, ""));
     if (!amount.trim() || Number.isNaN(n) || n <= 0) return;
-    onSubmit(`$${n} a ${period}`, true);
+    const display = `$${n.toLocaleString()} ${period === "month" ? t.perMonth : t.perYear}`;
+    onSubmit(`$${n} a ${period}`, true, display);
     setAmount("");
   }
 
@@ -89,7 +75,7 @@ function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string, gui
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         disabled={disabled}
-        placeholder="2,400"
+        placeholder={t.incomePlaceholder}
         className="w-28 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-teal-400 disabled:bg-slate-50"
       />
       <div className="flex rounded-full border border-slate-200 bg-white p-0.5 text-xs shadow-sm">
@@ -100,7 +86,7 @@ function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string, gui
             period === "month" ? "bg-teal-700 text-white" : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          /month
+          {t.perMonth}
         </button>
         <button
           type="button"
@@ -109,7 +95,7 @@ function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string, gui
             period === "year" ? "bg-teal-700 text-white" : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          /year
+          {t.perYear}
         </button>
       </div>
       <button
@@ -117,7 +103,7 @@ function IncomeQuickInput({ onSubmit, disabled }: { onSubmit: (text: string, gui
         disabled={disabled || !amount.trim()}
         className="rounded-full bg-teal-700 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Continue
+        {t.continueLabel}
       </button>
     </form>
   );
@@ -128,6 +114,7 @@ export default function ChatPanel({
   profile,
   clientId,
   programs,
+  lang = "en",
   onSend,
   onResolve,
   onRecheck,
@@ -139,6 +126,7 @@ export default function ChatPanel({
   const [sending, setSending] = useState(false);
   const [sendingGuided, setSendingGuided] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const t = INTAKE_STRINGS[lang];
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -154,16 +142,14 @@ export default function ChatPanel({
       ? "senior_disability"
       : null;
   const questionNumber = CORE_REQUIRED_FIELDS.length - missing.length + 1;
-  const questionPrompt = !coreDone
-    ? missing[0].prompt
-    : "Is anyone in your household a senior (65+) or living with a disability? Optional — it only affects one SF program.";
+  const questionPrompt = !coreDone ? t.prompts[missing[0].key as string] : t.seniorDisabilityPrompt;
 
-  async function submitMessage(text: string, guided = false) {
+  async function submitMessage(text: string, guided = false, display?: string) {
     if (!text.trim() || sending) return;
     setSending(true);
     if (guided) setSendingGuided(true);
     try {
-      await onSend(text, guided);
+      await onSend(text, guided, display);
     } finally {
       setSending(false);
       setSendingGuided(false);
@@ -188,11 +174,8 @@ export default function ChatPanel({
       >
         {thread.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <h2 className="text-2xl font-semibold text-slate-900">What&apos;s your situation?</h2>
-            <p className="max-w-md text-sm text-slate-500">
-              Tell me about your household — or just answer the quick questions below — and I&apos;ll surface every
-              SF benefit you likely qualify for, right here.
-            </p>
+            <h2 className="text-2xl font-semibold text-slate-900">{t.emptyTitle}</h2>
+            <p className="max-w-md text-sm text-slate-500">{t.emptySub}</p>
           </div>
         )}
         {thread.map((item, i) =>
@@ -224,7 +207,7 @@ export default function ChatPanel({
         {((sending && !sendingGuided) || screeningLoading) && (
           <div className="flex justify-start">
             <div className="rounded-3xl bg-slate-100 px-4 py-2.5 text-sm text-slate-400">
-              {screeningLoading ? "Checking what you qualify for…" : "Thinking…"}
+              {screeningLoading ? t.checking : t.thinking}
             </div>
           </div>
         )}
@@ -234,19 +217,19 @@ export default function ChatPanel({
         {activeField && (
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium text-slate-400">
-              {coreDone ? "Optional" : `Question ${questionNumber} of ${CORE_REQUIRED_FIELDS.length}`} ·{" "}
+              {coreDone ? t.optional : t.questionOf(questionNumber, CORE_REQUIRED_FIELDS.length)} ·{" "}
               {questionPrompt}
             </span>
             {activeField === "monthly_income_gross" ? (
-              <IncomeQuickInput onSubmit={submitMessage} disabled={disabled || sending} />
+              <IncomeQuickInput lang={lang} onSubmit={submitMessage} disabled={disabled || sending} />
             ) : (
               <div className="flex flex-wrap gap-2">
-                {CHIPS[activeField].map((chip) => (
+                {t.chips[activeField].map((chip) => (
                   <button
                     key={chip.value}
                     type="button"
                     disabled={disabled || sending}
-                    onClick={() => submitMessage(chip.value, true)}
+                    onClick={() => submitMessage(chip.value, true, chip.label)}
                     className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {chip.label}
@@ -262,7 +245,7 @@ export default function ChatPanel({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={disabled || sending}
-            placeholder={placeholder ?? "Or describe your whole situation…"}
+            placeholder={placeholder ?? t.composerPlaceholder}
             className="flex-1 rounded-full px-3 py-1.5 text-sm outline-none disabled:bg-white"
           />
           <button
@@ -270,7 +253,7 @@ export default function ChatPanel({
             disabled={disabled || sending || !draft.trim()}
             className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-40"
           >
-            Send
+            {t.send}
           </button>
         </form>
       </div>

@@ -1,33 +1,52 @@
 # Benefy
 
-A self-serve benefits-screening tool for San Francisco residents. You describe your own household in
-plain English; Benefy extracts a structured profile, runs a **deterministic eligibility engine**
-against three real SF/CA benefit programs, estimates the annual dollar value, flags uncertain cases for
-human review, and produces a pre-filled draft application.
+**Live at [www.usebenefy.com](https://www.usebenefy.com)** — a self-serve benefits screener for San
+Francisco residents. You describe your household in plain English (typed, tapped, or spoken), and
+Benefy screens you against **17 real SF/CA/federal benefit programs** in one conversation, estimates
+the annual dollar value you're leaving on the table, flags uncertain cases for review instead of
+guessing, and produces a pre-filled draft application.
 
-**Core principle:** the AI never decides eligibility. A pure, unit-tested rules engine
-(`src/lib/engine.ts`) is the only code path that ever returns `likely_eligible` / `likely_ineligible` /
-`needs_review`. That engine is exposed to a Gradient AI **Intake Agent** as a callable
-function/tool (`check_eligibility` — see `src/lib/gradient/tools.ts`): the agent gathers information and
-explains results, but the yes/no always comes from the function call, never the model.
+**Core principle: the AI never decides eligibility.** A pure, unit-tested rules engine
+(`src/lib/engine.ts`) is the only code path that ever returns `likely_eligible` /
+`likely_ineligible` / `needs_review`. The LLM agents gather information and explain results, but
+every verdict comes from a real function call into that engine — never from the model. Every result
+in the UI ships with a "View reasoning" trace showing exactly that chain.
+
+## Why this exists
+
+Benefits under-enrollment is one of the largest quantified anti-poverty gaps in California. Only
+around 70% of eligible Californians are enrolled in CalFresh — among the lowest SNAP participation
+rates in the country — leaving on the order of **$1–2 billion a year in federal food benefits
+unclaimed statewide**, with hundreds of millions more in unclaimed CalEITC (figures widely cited by
+CDSS and county human-services agencies; verify before quoting precisely). The money exists, the
+programs exist — the failure is discovery and paperwork.
+
+Great tools already attack single slices of this: **GetCalFresh** (Code for America) streamlines one
+program's application, **mRelief** screens for SNAP, **One Degree** is a searchable directory.
+Benefy's angle is different: **one conversation screens all 17 programs at once**, cross-program
+(food, utilities, transit, health, cash, housing, tax credits), and the number you're shown is the
+output of an auditable, deterministic engine — not a language model's opinion. Someone who came to
+check on food stamps leaves knowing they also qualify for a utility discount, free Muni, and a tax
+credit they'd never heard of.
 
 ## Running locally
 
 ```bash
 npm install
-npm run dev       # http://localhost:3000
-npm test          # engine + eval-harness unit tests (vitest)
-npm run build     # production build
+cp .env.example .env.local   # fill in at least the Supabase vars (persistence + auth)
+npm run dev                  # http://localhost:3000
+npm test                     # engine + eval-harness tests (19 tests, vitest)
+npm run build                # production build
 ```
 
-No database, no auth, no API keys required to run the full demo — each visitor's session is held in an
-in-memory store (`src/lib/store.ts`) that resets when the server restarts, by design (spec: demo data
-only, no real PII).
+Supabase (free tier) provides persistence (`supabase/schema.sql`) and email-OTP auth
+(`supabase/002_auth.sql`). All AI credentials are optional — see "Three backends" below; without
+them the app runs on its local fallback path and labels itself accordingly.
 
 ## Architecture
 
 ```
-your free text
+your free text / quick-reply chips / voice
         │
         ▼
    [Router]  ──capture info──▶  [Intake Agent] ──tool call──▶  check_eligibility()  ──▶  [deterministic engine]
@@ -36,108 +55,90 @@ your free text
 ```
 
 - **`src/lib/engine.ts`** — the deterministic eligibility engine. Pure function `evaluate(profile,
-  programs, fplTable)`. Same input always yields same output (see `tests/engine.test.ts`, 12 cases).
-- **`src/config/`** — `fpl_table.json`, `ami_table.json`, `programs.json`. All thresholds and dollar
-  values live here, not in code, and are sourced from real 2026 official documents (see "Data sources"
-  below). Swapping next year's numbers means editing JSON, not logic.
-- **`src/lib/gradient/`** — the Gradient AI integration layer:
-  - `client.ts` — thin fetch wrapper for DigitalOcean Gradient AI's OpenAI-compatible agent endpoints.
-  - `tools.ts` — the `check_eligibility` function/tool definition + executor (the centerpiece: this is
-    what the Intake Agent calls instead of guessing).
-  - `intakeAgent.ts` / `intakeExtractor.ts` — Intake Agent orchestration, with a local heuristic
-    extractor as fallback.
-  - `navigatorAgent.ts` — Navigator Agent orchestration; explains results and cites the same program
-    config a Knowledge Base would be built from, with a grounded local-template fallback.
-  - `router.ts` — multi-agent routing between Intake and Navigator based on the user's message.
-  - `guardrails.ts` — real code-level guardrail: strips/flags guarantee-style language
-    ("you WILL get...") from any agent output, live or fallback.
-  - `evals.ts` — an agent-evaluation harness: known-answer test cases run end-to-end through the engine
-    + Navigator + guardrails, explicitly checking the Navigator never asserts eligibility beyond what
-    the engine actually returned (`tests/evals.test.ts`).
+  programs)`. Same input always yields same output (`tests/engine.test.ts`).
+- **`src/config/`** — `fpl_table.json`, `ami_table.json`, `programs.json` (17 programs). All
+  thresholds and dollar values live here, not in code, sourced from real 2026 official documents
+  (see "Data sources"). Swapping next year's numbers means editing JSON, not logic.
+- **`src/lib/gradient/`** — the DigitalOcean AI integration layer: agent orchestration
+  (`intakeAgent.ts`, `navigatorAgent.ts`), multi-agent routing (`router.ts`), the
+  `check_eligibility` / `update_client_profile` function-tool definitions (`tools.ts`), code-level
+  guardrails that strip guarantee language from any agent output (`guardrails.ts`), and an eval
+  harness asserting the Navigator never claims more than the engine returned (`evals.ts`).
+- **`functions/`** — the same tools deployed as real DigitalOcean Functions
+  (`benefy-update-profile`, `benefy-check-eligibility`, `benefy-get-screening`), which the managed
+  Agent Platform agents invoke; they call back into `/api/functions/*` (authenticated by a shared
+  secret, `src/lib/functionAuth.ts`) so the *deployed* engine is still the single source of truth.
 - **`src/app/api/`** — Next.js route handlers: client CRUD, `intake` (chat turn → router → agent),
-  `screen` (invokes the function/tool + records a trace), `application/[programId]` (pre-fill), and
-  `gradient/evals`.
-- **`src/app/clients/[id]`** — the screening workspace UI (chat + live profile panel → results with
-  dollar reveal, program cards, "View reasoning" trace toggle → pre-filled application view).
+  `screen` (tool call + trace record), `application/[programId]` (pre-fill), realtime voice session.
+- **`src/app/clients/[id]`** — the screening workspace: guided chat with quick-reply chips
+  (**English/Spanish toggle** — 🇺🇸/🇪🇸), free-text intake, voice intake, results with dollar
+  reveal, program cards, "View reasoning" trace, pre-filled application view.
 
-### What's live vs. fallback, honestly
+### Three backends, tried in order (what's live, honestly)
 
-This build has **no DigitalOcean account wired to it** — there was no Gradient AI credential available
-in this environment. Every piece of the architecture above is real, tested code, but the Intake/Navigator
-agent calls run in **local fallback mode**: a heuristic text extractor stands in for the Intake Agent's
-LLM extraction, and a template generator grounded in `programs.json` stands in for the Navigator Agent's
-Knowledge-Base-backed explanation. The UI labels every explanation with its mode
-(`local_fallback` vs `live_gradient_agent`) so this is never hidden.
+1. **DigitalOcean Agent Platform** *(live)* — `benefy-intake` / `benefy-navigator` managed agents
+   with real attached DO Functions. The platform invokes the deployed functions itself; our app only
+   sees the side effects and the final reply.
+2. **DigitalOcean Serverless Inference** *(live)* — direct `llama3.3-70b-instruct` calls with real
+   tool-calling orchestrated in our backend (`inferenceClient.ts`), used if an agent call errors.
+3. **Local heuristic fallback** — a conservative regex extractor and template explanations grounded
+   in `programs.json`, so the demo never hard-fails. The UI labels every explanation with its mode
+   (`live_gradient_agent` / `live_inference` / `local_fallback`) — this is never hidden.
 
-Everything else — the deterministic engine, the function/tool schema, the router, the guardrails, the
-eval harness, the trace log — is real and exercised by the fallback path today, and becomes the real
-Gradient-backed path the moment credentials are set (no code changes required, see below).
+Voice intake ("Voice (beta)") uses the OpenAI Realtime API — labeled here because it's the one
+AI piece that is *not* DigitalOcean; its extracted fields flow into the exact same profile store and
+deterministic engine as text intake.
 
-## Wiring real Gradient AI (to actually enter the "Best Use of Gradient AI" track)
+### Language support
 
-1. In the DigitalOcean Gradient AI Platform, create two **Agents**:
-   - **Intake Agent** — attach the `check_eligibility` tool (schema in `src/lib/gradient/tools.ts`,
-     mirror it into the Gradient console's function definition). Point its backing model at Serverless
-     Inference.
-   - **Navigator Agent** — attach a **Knowledge Base** indexing the real CalFresh / PG&E CARE / SFMTA
-     source documents (the same ones cited in `programs.json`'s `_source` fields). Turn on
-     **guardrails** for guarantee-language and sensitive-data blocking.
-2. Set env vars (see `.env.example`):
-   ```
-   GRADIENT_INTAKE_AGENT_ENDPOINT=https://<intake-agent-id>.agents.do-ai.run
-   GRADIENT_INTAKE_AGENT_ACCESS_KEY=...
-   GRADIENT_NAVIGATOR_AGENT_ENDPOINT=https://<navigator-agent-id>.agents.do-ai.run
-   GRADIENT_NAVIGATOR_AGENT_ACCESS_KEY=...
-   ```
-3. Upload `src/lib/gradient/evals.ts`'s `EVAL_CASES` as a Gradient **Agent Evaluation** dataset and run
-   it through the platform's eval runner.
-4. Deploy to **DigitalOcean App Platform** pointed at this repo (`npm run build` / `npm start`).
-5. During a demo, open the Gradient workspace's **trace** view alongside this app's own "View reasoning"
-   toggle on the Results screen — both show the same chain: router → intake/function-call → engine
-   result → navigator explanation.
+The guided intake (questions, quick-reply chips, income stepper, completion summary) has a full
+Spanish mode behind a flag toggle (🇺🇸/🇪🇸). Free-text intake in Spanish is answered in Spanish by
+the live agents. Chips send canonical English values under the hood, so extraction behaves
+identically in both languages. Results/explanations are English-only for now — see roadmap.
+
+## Programs covered (17)
+
+CalFresh (SNAP) · Medi-Cal · SSI/SSP · CAPI · IHSS · CAAP/General Assistance · PG&E CARE ·
+PG&E FERA · LIHEAP · California LifeLine · SFPUC Water/Sewer Assistance · SF ERAP (rental
+assistance) · DAHLIA BMR housing lottery · Free Muni (seniors/disabilities) · Clipper START ·
+Clipper Access (RTC) · CalEITC
 
 ## Data sources (2026 figures, verify before relying on them)
+
+Full citations and effective dates are inlined as `_source` / `_note` fields in
+`src/config/*.json`. Highlights:
 
 | Figure | Source |
 |---|---|
 | Federal Poverty Level table | HHS ASPE, 2026 Poverty Guidelines (48 contiguous states) |
-| CalFresh gross income limit / max allotment | CDSS, 2025-2026 CalFresh Income & Eligibility Limits (eff. 10/1/2025–9/30/2026) |
-| PG&E CARE discount % and income basis | PG&E CARE program page (income guidelines valid through 5/31/2027) |
-| SFMTA Free Muni eligibility & AMI table | SFMTA Free Muni pages; SF MOHCD 2026 Maximum Income by Household Size (eff. 6/1/2026) |
-| Muni monthly pass price | SFMTA Fares page |
+| CalFresh gross income limit / max allotment | CDSS, 2025–2026 CalFresh Income & Eligibility Limits (eff. 10/1/2025–9/30/2026) |
+| PG&E CARE / FERA discount % and income basis | PG&E program pages (income guidelines valid through 5/31/2027) |
+| SF AMI table (Free Muni, DAHLIA, ERAP) | SF MOHCD 2026 Maximum Income by Household Size (eff. 6/1/2026) |
+| Transit fares & discounts | SFMTA Fares pages, MTC Clipper START |
 
-Full citations and effective dates are inlined as `_source` / `_note` fields in
-`src/config/*.json`. CalFresh and PG&E CARE per-household benefit *value estimates* are explicitly
-labeled illustrative averages (not guaranteed benefit amounts) since exact net-income deduction math is
-out of scope for this MVP.
-
-## Trying it out
-
-Landing page → "Check what I qualify for" creates a fresh, blank profile and drops you straight into
-the intake chat — no account, no caseload list. A few example prompts to try (each exercises a
-different path through the engine):
-
-1. "Single mom, two kids, on Medi-Cal, make about $2,500/month, live in the Tenderloin." → categorical
-   CalFresh + CARE pass.
-2. "68-year-old retired veteran, live alone in the Mission, Social Security is my only income, about
-   $14,000/year." → CalFresh + CARE + Free Muni all fire on income.
-3. "Parent and one kid, income's around $43,900/year, my visa paperwork is still in process." →
-   needs-review triggers on immigration status, $0 counted until resolved.
-4. "Household of 2, I have a disability and get SSDI plus part-time contract income, about $58,000/year
-   total." → too high for CalFresh/CARE, but disability-linked Free Muni still fires — an honest "no"
-   alongside a "yes."
-5. "I'm 52, I get SSI for a qualifying disability, live alone in SoMa." → categorical pass fires for
-   CalFresh and CARE without an income test at all.
+Per-household benefit *value estimates* are explicitly labeled illustrative averages (not guaranteed
+amounts) — exact net-income deduction math is out of scope, and programs whose tests can't be
+modeled honestly return `needs_review` rather than a guess.
 
 ## Testing
 
-`npm test` runs 13 cases across two suites:
-- `tests/engine.test.ts` — determinism, all four `needs_review` triggers, categorical pass, hard gates,
-  clear eligible/ineligible bands, savings-total exclusion of needs-review items.
-- `tests/evals.test.ts` — the Gradient agent-evaluation harness (`src/lib/gradient/evals.ts`), including
-  the explicit "Navigator never asserts eligibility beyond the engine's actual verdict" check.
+`npm test` runs 19 tests across two suites:
 
-## Explicit non-goals (per spec)
+- `tests/engine.test.ts` — determinism, all `needs_review` triggers, categorical passes, hard
+  gates, clear eligible/ineligible bands, savings-total exclusion of needs-review items.
+- `tests/evals.test.ts` — the agent-evaluation harness (`src/lib/gradient/evals.ts`), including the
+  explicit "Navigator never asserts eligibility beyond the engine's actual verdict" check, run
+  through the real guardrails.
 
-No real e-filing (pre-fill only, labeled "review and submit"), no auth/real PII storage, only 3 programs,
-no full net-income/asset-test math, no multilingual/voice intake.
+## Demo
+
+See [DEMO.md](DEMO.md) for the 3-minute judging walkthrough, including the trace-view beat and the
+fallback plan if live inference is slow.
+
+## Explicit non-goals (per spec) & roadmap
+
+No real e-filing (pre-fill only, labeled "review and submit"), no full net-income/asset-test math
+(those programs honestly return `needs_review`). Next: Spanish/Chinese across results and
+explanations (the intake layer already switches), a WCAG accessibility pass, and deep links from
+each program card into its real application portal to close the last mile from *screened* to
+*enrolled*.

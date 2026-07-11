@@ -27,24 +27,48 @@ export interface IntakeResponse {
   mode: "live_gradient_agent" | "live_inference" | "local_fallback";
 }
 
-const IMMIGRATION_STATUS_LABEL: Record<string, string> = {
-  citizen: "a U.S. citizen",
-  lpr: "a permanent resident",
-  other: "another immigration status",
-  unknown: "an unconfirmed immigration status",
+const IMMIGRATION_STATUS_LABEL: Record<string, Record<string, string>> = {
+  en: {
+    citizen: "a U.S. citizen",
+    lpr: "a permanent resident",
+    other: "another immigration status",
+    unknown: "an unconfirmed immigration status",
+  },
+  es: {
+    citizen: "ciudadano/a de EE. UU.",
+    lpr: "residente permanente",
+    other: "otro estatus migratorio",
+    unknown: "estatus migratorio sin confirmar",
+  },
 };
 
-function buildCompletionSummary(profile: ClientProfile): string {
+function buildCompletionSummary(profile: ClientProfile, lang: "en" | "es" = "en"): string {
+  const perMonth = lang === "es" ? "/mes" : "/month";
+  const perYear = lang === "es" ? "/año" : "/year";
   const income =
     profile.monthly_income_gross != null
-      ? `$${profile.monthly_income_gross.toLocaleString()}/month`
+      ? `$${profile.monthly_income_gross.toLocaleString()}${perMonth}`
       : profile.annual_income_gross != null
-        ? `$${profile.annual_income_gross.toLocaleString()}/year`
-        : "income on file";
-  const residency = profile.sf_resident ? "in San Francisco" : "outside San Francisco";
+        ? `$${profile.annual_income_gross.toLocaleString()}${perYear}`
+        : lang === "es"
+          ? "ingreso registrado"
+          : "income on file";
+  const residency =
+    profile.sf_resident
+      ? lang === "es"
+        ? "en San Francisco"
+        : "in San Francisco"
+      : lang === "es"
+        ? "fuera de San Francisco"
+        : "outside San Francisco";
   const status = profile.immigration_status
-    ? IMMIGRATION_STATUS_LABEL[profile.immigration_status]
-    : "immigration status on file";
+    ? IMMIGRATION_STATUS_LABEL[lang][profile.immigration_status]
+    : lang === "es"
+      ? "estatus migratorio registrado"
+      : "immigration status on file";
+  if (lang === "es") {
+    return `Entendido — hogar de ${profile.household_size}, ${income}, viviendo ${residency}, ${status}. Ejecutando su evaluación ahora.`;
+  }
   return `Got it — household of ${profile.household_size}, ${income}, living ${residency}, ${status}. Running your screening now.`;
 }
 
@@ -57,6 +81,7 @@ function buildCompletionSummary(profile: ClientProfile): string {
 export function runGuidedIntakeTurn(
   userText: string,
   profile: ClientProfile,
+  lang: "en" | "es" = "en",
 ): { patch: Partial<ClientProfile>; assistant_reply: string | null; ready_to_screen: boolean } {
   const { patch } = extractProfilePatch(userText, profile);
   const merged = { ...profile, ...patch };
@@ -64,7 +89,7 @@ export function runGuidedIntakeTurn(
   const stillMissingCore = missingCoreFields(merged).length > 0;
   return {
     patch,
-    assistant_reply: wasMissingCore && !stillMissingCore ? buildCompletionSummary(merged) : null,
+    assistant_reply: wasMissingCore && !stillMissingCore ? buildCompletionSummary(merged, lang) : null,
     ready_to_screen: !stillMissingCore,
   };
 }
@@ -101,7 +126,8 @@ Rules you always follow:
 4. Call check_eligibility only once those required fields are captured.
 5. immigration_status must be exactly one of: citizen, lpr, other, unknown. If the user is unsure or the situation sounds unclear, use unknown — never default to citizen to be helpful.
 6. Never use guarantee language ("you will get X", "guaranteed", "approved"). Frame any result as a screening estimate.
-7. Keep replies brief, warm, and plain-language — you're talking directly to the person applying, not a chatbot persona.`;
+7. Keep replies brief, warm, and plain-language — you're talking directly to the person applying, not a chatbot persona.
+8. Always reply in the same language the user writes in (e.g. answer Spanish messages in Spanish).`;
 
 export async function runIntakeTurn(
   userText: string,

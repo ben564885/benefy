@@ -18,6 +18,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const body = await request.json().catch(() => ({}));
   const message: string = body.message ?? "";
   const guided: boolean = body.guided === true;
+  const lang: "en" | "es" = body.lang === "es" ? "es" : "en";
+  // Guided chips send a canonical English `message` for extraction plus a
+  // localized `display` string — the display is what the user actually
+  // clicked, so that's what belongs in their chat history.
+  const display: string = typeof body.display === "string" && body.display.trim() ? body.display : message;
   if (!message.trim()) {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
@@ -33,8 +38,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       detail: "Structured quick-reply answer — resolved locally with no model call.",
       timestamp: new Date().toISOString(),
     });
-    const userMessage: ChatMessage = { role: "user", content: message, timestamp: new Date().toISOString() };
-    const { patch, assistant_reply, ready_to_screen } = runGuidedIntakeTurn(message, record.profile);
+    const userMessage: ChatMessage = { role: "user", content: display, timestamp: new Date().toISOString() };
+    const { patch, assistant_reply, ready_to_screen } = runGuidedIntakeTurn(message, record.profile, lang);
     const updated = await updateProfile(id, patch);
     const messages: ChatMessage[] = [userMessage];
     if (assistant_reply) {

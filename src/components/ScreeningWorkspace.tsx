@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ChatMessage, ClientProfile, ClientRecord, ProgramDefinition, ScreeningResult, TraceStep } from "@/lib/types";
 import ChatPanel, { type ThreadItem } from "@/components/ChatPanel";
 import RealtimeVoiceIntake from "@/components/RealtimeVoiceIntake";
+import { LANGS, type Lang } from "@/lib/i18n";
 
 interface Props {
   clientId: string;
@@ -49,6 +50,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
   const [hasScreening, setHasScreening] = useState(initialRecord.last_screening != null);
   const [screeningLoading, setScreeningLoading] = useState(false);
   const [intakeMode, setIntakeMode] = useState<"text" | "voice">("text");
+  const [lang, setLang] = useState<Lang>("en");
 
   async function refreshRecord() {
     const res = await fetch(`/api/clients/${clientId}`);
@@ -78,15 +80,18 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
     }
   }
 
-  async function handleSend(message: string, guided?: boolean) {
+  async function handleSend(message: string, guided?: boolean, display?: string) {
     setThread((prev) => [
       ...prev,
-      { kind: "message", message: { role: "user", content: message, timestamp: new Date().toISOString() } },
+      {
+        kind: "message",
+        message: { role: "user", content: display ?? message, timestamp: new Date().toISOString() },
+      },
     ]);
 
     const res = await fetch(`/api/clients/${clientId}/intake`, {
       method: "POST",
-      body: JSON.stringify({ message, guided: guided === true }),
+      body: JSON.stringify({ message, guided: guided === true, display, lang }),
     });
     const data = await res.json();
     if (!res.ok) return;
@@ -127,7 +132,23 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex w-fit gap-1 self-end rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
+      <div className="flex items-center gap-2 self-end">
+        <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-sm">
+          {LANGS.map((l) => (
+            <button
+              key={l.code}
+              onClick={() => setLang(l.code)}
+              aria-label={l.label}
+              title={l.label}
+              className={`rounded-full px-2 py-0.5 transition ${
+                lang === l.code ? "bg-white shadow-sm" : "opacity-40 hover:opacity-70"
+              }`}
+            >
+              {l.flag}
+            </button>
+          ))}
+        </div>
+        <div className="flex w-fit gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 text-xs">
         <button
           onClick={() => setIntakeMode("text")}
           className={`rounded-full px-3 py-1 font-medium transition ${
@@ -144,6 +165,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
         >
           Voice (beta)
         </button>
+        </div>
       </div>
 
       {intakeMode === "text" ? (
@@ -152,6 +174,7 @@ export default function ScreeningWorkspace({ clientId, initialRecord, initialCha
           profile={profile}
           clientId={clientId}
           programs={programs}
+          lang={lang}
           onSend={handleSend}
           onResolve={handleResolve}
           onRecheck={runScreen}
