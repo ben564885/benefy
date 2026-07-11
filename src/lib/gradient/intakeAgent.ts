@@ -75,22 +75,23 @@ export async function runIntakeTurn(
       timestamp: new Date().toISOString(),
     });
     try {
-      const systemPrompt = `You are the Intake agent for Benefy. Extract a partial ClientProfile JSON patch from the user's free text about their own household. Fields: household_size, monthly_income_gross, annual_income_gross, member_ages, has_senior, has_disability, immigration_status (citizen|lpr|other|unknown), sf_resident, zip_code, current_programs. Only include fields you're confident about. You may also call the check_eligibility tool once household_size, income, sf_resident, and immigration_status are known — but you never state eligibility yourself; only the tool result does. Current profile: ${JSON.stringify(profile)}. Respond with a JSON object patch, plus a short natural-language reply asking about any still-missing required fields.`;
-      const res = await callAgent(
-        "INTAKE",
-        [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userText },
-        ],
-        [CHECK_ELIGIBILITY_TOOL],
-      );
+      // The agent's own endpoint rejects system/developer-role messages —
+      // instructions are fixed server-side on the agent (see the `instruction`
+      // field set at agent-creation time). client_id has to travel as part of
+      // the user message instead, since the attached functions
+      // (update_client_profile / check_eligibility) are real deployed DO
+      // Functions the *platform* invokes — our code never sees their
+      // arguments or results directly, only the side effect they leave in the
+      // store, and the final natural-language reply.
+      const res = await callAgent("INTAKE", [
+        { role: "user", content: `[client_id: ${clientId}]\n${userText}` },
+      ]);
       if (res.content) {
-        const parsed = JSON.parse(res.content) as { patch?: Partial<ClientProfile>; reply?: string };
-        const patch = parsed.patch ?? {};
+        const current = getClient(clientId)?.profile ?? profile;
         return {
-          patch,
-          assistant_reply: parsed.reply ?? buildFollowUpReply(profile, patch),
-          ready_to_screen: missingCoreFields({ ...profile, ...patch }).length === 0,
+          patch: {},
+          assistant_reply: res.content,
+          ready_to_screen: missingCoreFields(current).length === 0,
           mode: "live_gradient_agent",
         };
       }

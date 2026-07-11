@@ -138,20 +138,19 @@ export async function explainScreening(
     .map((r) => citationFor(r.program_id))
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
-  if (isAgentConfigured("NAVIGATOR")) {
+  if (isAgentConfigured("NAVIGATOR") && clientId) {
     trace.push({
       step: "navigator_agent_call",
       actor: "navigator_agent",
       detail: `Calling live Gradient Navigator agent (Knowledge Base-attached) to ${question ? "answer: " + question : "explain the screening result"}.`,
       timestamp: new Date().toISOString(),
     });
-    const systemPrompt = `You are the Navigator agent for Benefy, a benefits screening tool used directly by SF residents. You explain deterministic eligibility screening results in plain English and answer questions using the attached Knowledge Base of official program documents (CalFresh, PG&E CARE, SFMTA Free Muni). You NEVER assert eligibility yourself — you only explain results that were already computed by the check_eligibility function. Always cite the source document. Never use guarantee language ("you will get", "guaranteed") — always frame results as a screening estimate.`;
-    const userPrompt = `User's household: ${JSON.stringify(profile)}\nScreening result: ${JSON.stringify(screening)}\n${question ? `User's question: ${question}` : "Explain this screening result to the user directly."}`;
+    // No system-role message here either — same constraint as the Intake
+    // agent. get_screening_result is a real attached Function; the platform
+    // calls it itself, we just supply client_id inline and read the reply.
+    const userPrompt = `[client_id: ${clientId}]\n${question ?? "Explain my screening result to me."}`;
     try {
-      const res = await callAgent("NAVIGATOR", [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ]);
+      const res = await callAgent("NAVIGATOR", [{ role: "user", content: userPrompt }]);
       const raw = res.content ?? localFallbackExplain(profile, screening);
       const { text, violations } = applyGuardrails(raw);
       return { text, citations, guardrail_violations: violations, mode: "live_gradient_agent" };
